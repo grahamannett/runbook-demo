@@ -13,10 +13,10 @@ from .style import Style
 STYLE: Style = Style()
 
 
-def _chat_box(
-    chat_state: ChatState,
+def chat_page(
     input_box_id: str,
-) -> rx.Component:
+    chat_state: ChatState = ChatState,
+):
     return rx.box(
         rx.vstack(
             nav_bar(
@@ -38,27 +38,4 @@ def _chat_box(
             **STYLE.body,
         ),
         **STYLE.parent,
-    )
-
-
-def require_login(page: rx.app.ComponentCallable) -> rx.app.ComponentCallable:
-    @functools.wraps(page)
-    def protected_page() -> rx.Component:
-        return rx.box(
-            rx.cond(
-                AuthState.is_hydrated,
-                rx.cond(AuthState.valid_session, page(), signin_page()),
-                rx.spinner(),
-            ),
-        )
-
-    return protected_page
-
-def chat_page(
-    chat_state: ChatState,
-    input_box_id: str,
-):
-    return _chat_box(
-        chat_state=chat_state,
-        input_box_id=input_box_id,
     )

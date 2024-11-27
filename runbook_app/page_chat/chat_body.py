@@ -12,7 +12,6 @@ from runbook_app.page_chat.chat_messages.model_chat_message_answer import ANSWER
 from runbook_app.page_chat.chat_messages.model_chat_message_question import (
     QUESTION_STYLE,
 )
-from runbook_app.templates.action_bar import action_bar
 from runbook_app.templates.pop_up import dialog_library
 
 
@@ -46,7 +45,6 @@ def message_wrapper(
                     overflow_wrap="break_word",
                     width="100%",
                 ),
-                # gap="24px",
                 **QUESTION_STYLE.default,
             ),
         )
@@ -75,9 +73,6 @@ def message_wrapper(
                 overflow_wrap="break_word",
                 width="100%",
             ),
-            # action_bar(
-            #     has_token=has_token,
-            # ),
             **ANSWER_STYLE.default,
         )
 

@@ -1,8 +1,8 @@
 import reflex as rx
 
-import constants
+import rxconstants
 
 config = rx.Config(
     app_name="runbook_app",
-    saved_runbooks_dir=constants.saved_runbooks_dir,
+    saved_runbooks_dir=rxconstants.saved_runbooks_dir,
 )

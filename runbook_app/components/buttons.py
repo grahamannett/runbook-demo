@@ -5,6 +5,8 @@ from typing import Callable
 
 import reflex as rx
 
+from runbook_app.page_chat.chat_state import AuthState
+
 from .loading_icon import loading_icon
 
 
@@ -21,6 +23,16 @@ class Style:
 
 
 BUTTON_STYLE: Style = Style()
+
+
+def logout_button():
+    """Creates a logout button."""
+    logout_style = {**BUTTON_STYLE.default, "background": "salmon"}
+    return rx.button(
+        "Logout",
+        on_click=AuthState.logout,
+        **logout_style,
+    )
 
 
 def button_with_icon(

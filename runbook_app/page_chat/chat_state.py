@@ -61,9 +61,18 @@ model_name = get_ai_model()
 MAX_QUESTIONS = 10
 INPUT_BOX_ID = "input-box"
 
-class AuthState(rx.State):
-    allowed: bool = False
 
+class AuthState(rx.State):
+    valid_session: bool = False
+
+    def handle_submit(self, form_data: dict) -> None:
+        print(f"data: {form_data}")
+        self.valid_session = True
+        return rx.redirect("/")
+
+    def logout(self) -> None:
+        self.valid_session = False
+        return rx.redirect("/")
 
 
 class ChatState(rx.State):
@@ -79,13 +88,11 @@ class ChatState(rx.State):
     chat_interactions: list[ChatInteraction] = []
 
     has_token: bool = True
-    username: str = "Mauro Sicard"
+    username: str = "Runbook User"
     prompt: str = ""
     result: str = ""
     ai_loading: bool = False
-    timestamp: datetime.datetime = datetime.datetime.now(
-        tz=zoneinfo.ZoneInfo("America/Boise"),
-    )
+    timestamp: datetime.datetime = datetime.datetime.now(tz=zoneinfo.ZoneInfo("America/Boise"))
 
     @rx.var
     def timestamp_formatted(
@@ -131,6 +138,10 @@ class ChatState(rx.State):
                 )
 
         return []
+
+    def get_html_document(self, url: str) -> None:
+        # Create directory if it doesn't exist
+        os.makedirs("runbook-documents", exist_ok=True)
 
     def load_messages_from_database(
         self,
@@ -200,6 +211,8 @@ class ChatState(rx.State):
     async def submit_prompt(
         self,
     ):
+        stream_resp: bool = False
+
         async def _fetch_chat_completion_session(
             prompt: str,
         ):
@@ -249,7 +262,7 @@ class ChatState(rx.State):
 
             messages = _create_messages_for_chat_completion()
             client_instance: Together = self._get_client_instance()
-            stream = client_instance.chat.completions.create(
+            resp = client_instance.chat.completions.create(
                 model=AI_MODEL,
                 messages=messages,
                 max_tokens=512,
@@ -259,12 +272,12 @@ class ChatState(rx.State):
                 repetition_penalty=1,
                 stop=["<|eot_id|>", "<|eom_id|>"],
                 truncate=130560,
-                stream=True,
+                stream=stream_resp,
             )
-            if stream is None:
+            if resp is None:
                 raise Exception("Session is None")
 
-            return stream
+            return resp
 
         def set_ui_loading_state() -> None:
             self.ai_loading = True
@@ -300,14 +313,12 @@ class ChatState(rx.State):
 
             yield
 
-            with using_prompt_template(
-                template=prompt,
-            ):
-                stream = await _fetch_chat_completion_session(prompt)
-                clear_ui_loading_state()
-                add_new_chat_interaction()
-                yield
+            resp = await _fetch_chat_completion_session(prompt)
+            clear_ui_loading_state()
+            add_new_chat_interaction()
+            yield
 
+            def _handle_streaming_response(stream):
                 try:
                     for item in stream:
                         if item.choices and item.choices[0] and item.choices[0].delta:
@@ -328,6 +339,17 @@ class ChatState(rx.State):
                     raise
 
                 self.result = self.chat_interactions[-1].answer
-        self._save_resulting_chat_interaction(
-            chat_interaction=self.chat_interactions[-1],
-        )
+
+            def _handle_response(resp):
+                self.chat_interactions[-1].answer = resp.choices[0].message.content
+                self.result = self.chat_interactions[-1].answer
+                # yield rx.scroll_to(
+                #     elem_id=INPUT_BOX_ID,
+                # )
+
+            if stream_resp:
+                yield _handle_streaming_response(resp)
+            else:
+                yield _handle_response(resp)
+
+        # self._save_resulting_chat_interaction(chat_interaction=self.chat_interactions[-1])

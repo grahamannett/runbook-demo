@@ -3,7 +3,7 @@ from typing import Callable
 
 import reflex as rx
 
-from runbook_app.components.buttons import button_with_icon
+from runbook_app.components.buttons import button_with_icon, logout_button
 
 
 @dataclass
@@ -47,6 +47,7 @@ def nav_bar(
     return rx.hstack(
         rx.hstack(
             # toggle theme
+            logout_button(),
             rx.color_mode.button(),
             **NAV_BAR_STYLE.component,
         ),

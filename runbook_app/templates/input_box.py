@@ -7,6 +7,18 @@ from runbook_app.components.buttons import button_with_icon
 from .pop_up import LibraryPrompt
 
 
+def use_website_button():
+    return rx.icon(
+        tag="panel-top",
+        size=18,
+        color=rx.color(
+            color="slate",
+            shade=11,
+        ),
+        # on_click= # TODO: Add on_click event,
+    )
+
+
 def input_box(
     input_box_id: str,
     input_box_text_value: str,
@@ -28,7 +40,7 @@ def input_box(
                 ),
             ),
             value=input_box_text_value,
-            placeholder="How can I help?",
+            placeholder="Generate a runbook for which task",
             on_change=input_prompt_on_change,
             height="75px",
             width="100%",
@@ -70,17 +82,7 @@ def input_box(
                     id=input_box_id,
                 ),
                 rx.spacer(),
-                *[
-                    rx.icon(
-                        tag=name,
-                        size=18,
-                        color=rx.color(
-                            color="slate",
-                            shade=11,
-                        ),
-                    )
-                    for name in ["paperclip", "image", "mic", "layout-grid"]
-                ],
+                use_website_button(),
                 display="flex",
                 align="center",
             ),
