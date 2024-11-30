@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 from dataclasses import dataclass, field
+from typing import Any
 
 import reflex as rx
 
@@ -9,7 +8,7 @@ from runbook_app.templates.style import Style as TemplateStyle
 
 @dataclass
 class Style(TemplateStyle):
-    component_wrapper: dict[str, str] = field(
+    component_wrapper: dict[str, str | Any] = field(
         default_factory=lambda: {
             "top": "0",
             "right": "0",
@@ -28,4 +27,3 @@ class Style(TemplateStyle):
             ),
         },
     )
-

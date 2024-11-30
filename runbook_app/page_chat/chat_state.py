@@ -64,12 +64,12 @@ INPUT_BOX_ID = "input-box"
 class AuthState(rx.State):
     valid_session: bool = False
 
-    def handle_submit(self, form_data: dict) -> None:
+    def handle_submit(self, form_data: dict):
         print(f"data: {form_data}")
         self.valid_session = True
         return rx.redirect("/")
 
-    def logout(self) -> None:
+    def logout(self):
         self.valid_session = False
         return rx.redirect("/")
 
@@ -115,27 +115,27 @@ class ChatState(rx.State):
     def _fetch_messages(
         self,
     ) -> list[ChatInteraction]:
-        if not self.has_checked_database:
-            with rx.session() as session:
-                self.has_checked_database = True
-                query = select(ChatInteraction)
-                if self.filter_str:
-                    query = query.where(
-                        or_(
-                            column(ChatInteraction.prompt).contains(self.filter_str),
-                            column(ChatInteraction.answer).contains(self.filter_str),
-                        ),
-                    )
-
-                result = (
-                    session.exec(
-                        query.order_by(ChatInteraction.timestamp.desc()).limit(MAX_QUESTIONS),
-                    )
-                    .scalars()
-                    .all()
+        # if not self.has_checked_database:
+        with rx.session() as session:
+            # self.has_checked_database = True
+            query = select(ChatInteraction)
+            if self.filter_str:
+                query = query.where(
+                    or_(
+                        column(ChatInteraction.prompt).contains(self.filter_str),
+                        column(ChatInteraction.answer).contains(self.filter_str),
+                    ),
                 )
 
-                return result
+            result = (
+                session.exec(
+                    query.order_by(ChatInteraction.timestamp.desc()).limit(MAX_QUESTIONS),
+                )
+                .scalars()
+                .all()
+            )
+
+            return result
 
         return []
 
@@ -147,6 +147,7 @@ class ChatState(rx.State):
         self,
     ) -> None:
         self.chat_interactions = self._fetch_messages()
+        print(f"Messages for current chat loaded: {len(self.chat_interactions)}")
 
     def set_prompt(
         self,
@@ -193,7 +194,7 @@ class ChatState(rx.State):
 
     async def _process_response(self, resp):
         """Process the response from the chat completion, handling both streaming and non-streaming cases.
-        
+
         Args:
             resp: The response from the chat completion session
         """

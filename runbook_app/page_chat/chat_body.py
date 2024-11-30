@@ -1,8 +1,8 @@
+from datetime import datetime
 from typing import Any
 
 import reflex as rx
 
-from runbook_app.components.avatars import chat_message_avatar
 from runbook_app.components.dividers import chat_date_divider
 from runbook_app.components.typography import msg_header
 from runbook_app.page_chat.chat_messages.model_chat_interaction import ChatInteraction
@@ -13,65 +13,75 @@ answer_style_kwargs: dict[str, Any] = ANSWER_STYLE.default
 question_style_kwargs: dict[str, Any] = QUESTION_STYLE.default
 
 
+def message_part_component(
+    *message_children,
+    avatar_url: str,
+    user_name: str,
+    timestamp: datetime,
+    message: str,
+    style_kwargs: dict[str, Any],
+):
+    return rx.hstack(
+        rx.vstack(
+            rx.avatar(
+                src=avatar_url,
+                size="2",
+                border_radius="100%",
+            ),
+        ),
+        rx.vstack(
+            msg_header(
+                header_title=user_name,
+                date=timestamp,
+            ),
+            rx.markdown(
+                message,
+                color=rx.color(
+                    color="slate",
+                    shade=11,
+                ),
+            ),
+            *message_children,
+            overflow_wrap="break_word",
+            width="100%",
+        ),
+        **style_kwargs,
+    )
+
+
+def bot_response_buttons():
+    return rx.box(
+        "CSS color",
+        background_color="red",
+        border_radius="2px",
+        width="100%",
+        margin_y="10px",
+    )
+
+
 def message_wrapper(
     chat_interaction: ChatInteraction,
     has_token: bool,
 ):
-    def _get_message_question():
-        return rx.hstack(
-            rx.vstack(
-                chat_message_avatar(
-                    src=chat_interaction.chat_participant_user_avatar_url,
-                ),
-            ),
-            rx.vstack(
-                msg_header(
-                    header_title=chat_interaction.chat_participant_user_name,
-                    date=chat_interaction.timestamp,
-                ),
-                rx.markdown(
-                    chat_interaction.prompt,
-                    color=rx.color(
-                        "slate",
-                        11,
-                    ),
-                    overflow_wrap="break_word",
-                    width="100%",
-                ),
-                **question_style_kwargs,
-            ),
-        )
-
-    def _get_message_answer(
-        has_token: bool,
-    ):
-        return rx.hstack(
-            rx.vstack(
-                chat_message_avatar(
-                    src=chat_interaction.chat_participant_assistant_avatar_url,
-                ),
-            ),
-            rx.vstack(
-                msg_header(
-                    header_title=chat_interaction.chat_participant_assistant_name,
-                    date=chat_interaction.timestamp,
-                ),
-                rx.markdown(
-                    chat_interaction.answer,
-                    color=rx.color(
-                        color="slate",
-                        shade=11,
-                    ),
-                ),
-                overflow_wrap="break_word",
-                width="100%",
-            ),
-            **answer_style_kwargs,
-        )
-
     return rx.fragment(
-        _get_message_question(),
-        _get_message_answer(has_token=has_token),
+        # this component is related to the user input
+        message_part_component(
+            avatar_url=chat_interaction.chat_participant_user_avatar_url,
+            user_name=chat_interaction.chat_participant_user_name,
+            timestamp=chat_interaction.timestamp,
+            message=chat_interaction.prompt,
+            style_kwargs=question_style_kwargs,
+        ),
+        # this component is related to the bot response
+        message_part_component(
+            # bot_response_buttons(),
+            avatar_url=chat_interaction.chat_participant_assistant_avatar_url,
+            user_name=chat_interaction.chat_participant_assistant_name,
+            timestamp=chat_interaction.timestamp,
+            message=chat_interaction.answer,
+            style_kwargs=answer_style_kwargs,
+        ),
+        # bot_response_buttons(),
     )
 
 

@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Any, Callable
 
 import reflex as rx
 
@@ -16,7 +14,6 @@ class Style:
         default_factory=lambda: {
             "radius": "large",
             "cursor": "pointer",
-            "variant": "classic",
             "padding": "18px 16px",
         },
     )
@@ -24,14 +21,18 @@ class Style:
 
 BUTTON_STYLE: Style = Style()
 
+button_style: dict[str, Any] = BUTTON_STYLE.default
+
 
 def logout_button():
     """Creates a logout button."""
-    logout_style = {**BUTTON_STYLE.default, "background": "salmon"}
     return rx.button(
         "Logout",
         on_click=AuthState.logout,
-        **logout_style,
+        **{
+            **button_style,
+            "background": "salmon",
+        },
     )
 
 
@@ -72,7 +73,7 @@ def button_with_icon(
                 justify="center",
             ),
         ),
-        **BUTTON_STYLE.default,
+        **button_style,
         **kwargs,
         on_click=on_click,
     )
