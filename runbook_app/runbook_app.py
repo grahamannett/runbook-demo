@@ -1,4 +1,5 @@
 import functools
+import os
 
 import reflex as rx
 from reflex.utils.exec import is_prod_mode
@@ -11,6 +12,14 @@ app = rx.App(
         "https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap",
     ],
 )
+
+
+def is_dev_mode():
+    if os.environ.get("DEV_MODE"):
+        return False
+    if not is_prod_mode():
+        return True
+    return False
 
 
 def signin():
@@ -26,7 +35,7 @@ def signin():
 
 
 def require_login(page: rx.app.ComponentCallable) -> rx.app.ComponentCallable:
-    if not is_prod_mode():
+    if is_dev_mode():
         return page
 
     @functools.wraps(page)

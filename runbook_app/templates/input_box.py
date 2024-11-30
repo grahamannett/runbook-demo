@@ -4,18 +4,50 @@ import reflex as rx
 
 from runbook_app.components.buttons import button_with_icon
 
-from .pop_up import LibraryPrompt
+from .pop_up import DocumentLibrary, LibraryPrompt
 
 
-def use_website_button():
-    return rx.icon(
-        tag="panel-top",
-        size=18,
+def use_library_button(library_prompt: LibraryPrompt, input_box_id: str):
+    return rx.button(
+        rx.icon(tag="book", size=18),
+        "Library",
+        radius="large",
+        cursor="pointer",
+        padding="18px 16px",
+        bg="transparent",
+        border=rx.color_mode_cond(
+            light="1px solid indigo",
+            dark="1px solid slate",
+        ),
         color=rx.color(
             color="slate",
             shade=11,
         ),
-        # on_click= # TODO: Add on_click event,
+        on_click=library_prompt.toggle_prompt_library,
+        id=input_box_id,
+    )
+
+
+def use_document_button():
+    def on_click():
+        return rx.toast("Document button clicked!")
+
+    return rx.button(
+        rx.icon(tag="panel-top", size=18),
+        "Documents",
+        radius="large",
+        cursor="pointer",
+        padding="18px 16px",
+        bg="transparent",
+        border=rx.color_mode_cond(
+            light="1px solid indigo",
+            dark="1px solid slate",
+        ),
+        color=rx.color(
+            color="slate",
+            shade=11,
+        ),
+        on_click=on_click,
     )
 
 
@@ -60,29 +92,9 @@ def input_box(
         rx.divider(),
         rx.hstack(
             rx.hstack(
-                rx.button(
-                    rx.icon(
-                        tag="book",
-                        size=18,
-                    ),
-                    "Library",
-                    radius="large",
-                    cursor="pointer",
-                    padding="18px 16px",
-                    bg="transparent",
-                    border=rx.color_mode_cond(
-                        light="1px solid indigo",
-                        dark="1px solid slate",
-                    ),
-                    color=rx.color(
-                        color="slate",
-                        shade=11,
-                    ),
-                    on_click=library_prompt.toggle_prompt_library,
-                    id=input_box_id,
-                ),
+                use_library_button(library_prompt=library_prompt, input_box_id=input_box_id),
                 rx.spacer(),
-                use_website_button(),
+                use_document_button(),
                 display="flex",
                 align="center",
             ),

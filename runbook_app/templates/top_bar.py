@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Any, Callable
 
 import reflex as rx
 
@@ -8,15 +8,14 @@ from runbook_app.components.buttons import button_with_icon, logout_button
 
 @dataclass
 class Style:
-    """Style for the top bar."""
+    """
+    Style for the top bar.
 
-    icons: set[str] = (
-        "settings",
-        "trash",
-        "archive",
-        "panel-right",
-    )
-    default: dict[str, str | rx.Component] = field(
+    Previously had the following icons listed: "settings", "trash", "archive", "panel-right"
+
+    """
+
+    default: dict[str, str | rx.Component | rx.Var] = field(
         default_factory=lambda: {
             "width": "100%",
             "display": "flex",
@@ -28,6 +27,7 @@ class Style:
             ),
         },
     )
+
     component: dict[str, str] = field(
         default_factory=lambda: {
             "width": "400px",
@@ -39,6 +39,8 @@ class Style:
 
 
 NAV_BAR_STYLE: Style = Style()
+nav_bar_style_component_kwargs: dict[str, Any] = NAV_BAR_STYLE.component
+nav_bar_style_default_kwargs: dict[str, Any] = NAV_BAR_STYLE.default
 
 
 def nav_bar(
@@ -49,12 +51,12 @@ def nav_bar(
             # toggle theme
             logout_button(),
             rx.color_mode.button(),
-            **NAV_BAR_STYLE.component,
+            **nav_bar_style_component_kwargs,
         ),
         button_with_icon(
             text="New Chat",
             icon="plus",
             on_click=on_create_new_chat,
         ),
-        **NAV_BAR_STYLE.default,
+        **nav_bar_style_default_kwargs,
     )

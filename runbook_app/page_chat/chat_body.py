@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from enum import Enum
+from typing import Any
 
 import reflex as rx
 
@@ -8,16 +6,11 @@ from runbook_app.components.avatars import chat_message_avatar
 from runbook_app.components.dividers import chat_date_divider
 from runbook_app.components.typography import msg_header
 from runbook_app.page_chat.chat_messages.model_chat_interaction import ChatInteraction
-from runbook_app.page_chat.chat_messages.model_chat_message_answer import ANSWER_STYLE
-from runbook_app.page_chat.chat_messages.model_chat_message_question import (
-    QUESTION_STYLE,
-)
+from runbook_app.page_chat.chat_messages.style import ANSWER_STYLE, QUESTION_STYLE
 from runbook_app.templates.pop_up import dialog_library
 
-
-class MessageType(Enum):
-    QUESTION = "question"
-    ANSWER = "answer"
+answer_style_kwargs: dict[str, Any] = ANSWER_STYLE.default
+question_style_kwargs: dict[str, Any] = QUESTION_STYLE.default
 
 
 def message_wrapper(
@@ -45,7 +38,7 @@ def message_wrapper(
                     overflow_wrap="break_word",
                     width="100%",
                 ),
-                **QUESTION_STYLE.default,
+                **question_style_kwargs,
             ),
         )
 
@@ -73,14 +66,12 @@ def message_wrapper(
                 overflow_wrap="break_word",
                 width="100%",
             ),
-            **ANSWER_STYLE.default,
+            **answer_style_kwargs,
         )
 
     return rx.fragment(
         _get_message_question(),
-        _get_message_answer(
-            has_token=has_token,
-        ),
+        _get_message_answer(has_token=has_token),
     )
 
 

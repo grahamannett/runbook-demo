@@ -38,7 +38,7 @@ def logout_button():
 def button_with_icon(
     text: str,
     icon: str,
-    on_click: Callable,
+    on_click: Callable = lambda: None,
     is_loading: bool = False,
     **kwargs,
 ):

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import datetime
 import os
 import zoneinfo
@@ -7,10 +5,11 @@ import zoneinfo
 import reflex as rx
 
 # Import open-telemetry dependencies
-from sqlalchemy import or_, select
+from sqlalchemy import column, or_, select
 from together import Together
 
-from .chat_messages.model_chat_interaction import ChatInteraction
+from runbook_app.llm_tools import create_messages_for_chat_completion
+from runbook_app.page_chat.chat_messages.model_chat_interaction import ChatInteraction
 
 AI_MODEL: str = "UNKNOWN"
 OTEL_HEADERS: str | None = None
@@ -78,12 +77,13 @@ class AuthState(rx.State):
 class ChatState(rx.State):
     """The app state."""
 
-    filter: str = ""
+    filter_str: str = ""
 
     _ai_client_instance: Together | None = None
     _ai_chat_instance = None
 
     has_checked_database: bool = False
+    stream_resp: bool = True
 
     chat_interactions: list[ChatInteraction] = []
 
@@ -119,23 +119,23 @@ class ChatState(rx.State):
             with rx.session() as session:
                 self.has_checked_database = True
                 query = select(ChatInteraction)
-                if self.filter:
+                if self.filter_str:
                     query = query.where(
                         or_(
-                            ChatInteraction.prompt.ilike(f"%{self.filter}%"),
-                            ChatInteraction.answer.ilike(f"%{self.filter}%"),
+                            column(ChatInteraction.prompt).contains(self.filter_str),
+                            column(ChatInteraction.answer).contains(self.filter_str),
                         ),
                     )
 
-                return (
+                result = (
                     session.exec(
-                        query.distinct(ChatInteraction.prompt)
-                        .order_by(ChatInteraction.timestamp.desc())
-                        .limit(MAX_QUESTIONS),
+                        query.order_by(ChatInteraction.timestamp.desc()).limit(MAX_QUESTIONS),
                     )
                     .scalars()
                     .all()
                 )
+
+                return result
 
         return []
 
@@ -174,93 +174,62 @@ class ChatState(rx.State):
         self,
         username: str,
         prompt: str,
-    ) -> None:
+    ) -> bool:
         with rx.session() as session:
-            if (
-                session.exec(
-                    select(ChatInteraction)
-                    .where(
-                        ChatInteraction.chat_participant_user_name == username,
-                    )
-                    .where(
-                        ChatInteraction.prompt == prompt,
-                    ),
-                ).first()
-                or len(
-                    session.exec(
-                        select(ChatInteraction)
-                        .where(
-                            ChatInteraction.chat_participant_user_name == username,
+            asked_previously = session.exec(
+                select(ChatInteraction)
+                .where(
+                    ChatInteraction.chat_participant_user_name == username,
+                )
+                .where(
+                    ChatInteraction.prompt == prompt,
+                ),
+            ).scalar_one_or_none()
+
+            if asked_previously:
+                return True
+
+            return False
+
+    async def _process_response(self, resp):
+        """Process the response from the chat completion, handling both streaming and non-streaming cases.
+        
+        Args:
+            resp: The response from the chat completion session
+        """
+        if self.stream_resp:
+            try:
+                for item in resp:
+                    if item.choices and item.choices[0] and item.choices[0].delta:
+                        answer_text = item.choices[0].delta.content
+                        # Ensure answer_text is not None before concatenation
+                        if answer_text is not None:
+                            self.chat_interactions[-1].answer += answer_text
+                        else:
+                            answer_text = ""
+                            self.chat_interactions[-1].answer += answer_text
+
+                        yield rx.scroll_to(
+                            elem_id=INPUT_BOX_ID,
                         )
-                        .where(
-                            ChatInteraction.timestamp
-                            > datetime.datetime.now()
-                            - datetime.timedelta(
-                                days=1,
-                            ),
-                        ),
-                    ).all(),
-                )
-                > MAX_QUESTIONS
-            ):
-                raise ValueError(
-                    "You have already asked this question or have asked too many questions in the past 24 hours.",
-                )
+
+            except StopAsyncIteration:
+                raise
+
+            self.result = self.chat_interactions[-1].answer
+
+        else:
+            self.chat_interactions[-1].answer = resp.choices[0].message.content
+            self.result = self.chat_interactions[-1].answer
 
     @rx.event(background=True)
     async def submit_prompt(
         self,
     ):
-        stream_resp: bool = False
-
         async def _fetch_chat_completion_session(
             prompt: str,
         ):
-            def _create_messages_for_chat_completion():
-                messages = [
-                    {
-                        "role": "system",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": "You are a helpful assistant. Respond in markdown.",
-                            },
-                        ],
-                    },
-                ]
-                for chat_interaction in self.chat_interactions:
-                    messages.append(
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": chat_interaction.prompt,
-                                },
-                            ],
-                        },
-                    )
-                    messages.append(
-                        {
-                            "role": "assistant",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": chat_interaction.answer,
-                                },
-                            ],
-                        },
-                    )
-
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": prompt,
-                    },
-                )
-                return messages
-
-            messages = _create_messages_for_chat_completion()
+            messages = create_messages_for_chat_completion(self.chat_interactions, prompt)
             client_instance: Together = self._get_client_instance()
             resp = client_instance.chat.completions.create(
                 model=AI_MODEL,
@@ -272,7 +241,7 @@ class ChatState(rx.State):
                 repetition_penalty=1,
                 stop=["<|eot_id|>", "<|eom_id|>"],
                 truncate=130560,
-                stream=stream_resp,
+                stream=self.stream_resp,
             )
             if resp is None:
                 raise Exception("Session is None")
@@ -304,10 +273,15 @@ class ChatState(rx.State):
         if self.username == "":
             raise ValueError("Username is required")
 
-        await self._check_saved_chat_interactions(
+        if prev_exists := await self._check_saved_chat_interactions(
             prompt=prompt,
             username=self.username,
-        )
+        ):
+            yield rx.toast.error(
+                "You have already asked this question or have asked too many questions in the past 24 hours.",
+            )
+            return
+
         async with self:
             set_ui_loading_state()
 
@@ -318,38 +292,7 @@ class ChatState(rx.State):
             add_new_chat_interaction()
             yield
 
-            def _handle_streaming_response(stream):
-                try:
-                    for item in stream:
-                        if item.choices and item.choices[0] and item.choices[0].delta:
-                            answer_text = item.choices[0].delta.content
-                            # Ensure answer_text is not None before concatenation
-                            if answer_text is not None:
-                                self.chat_interactions[-1].answer += answer_text
+            async for scroll_event in self._process_response(resp):
+                yield scroll_event
 
-                            else:
-                                answer_text = ""
-                                self.chat_interactions[-1].answer += answer_text
-
-                            yield rx.scroll_to(
-                                elem_id=INPUT_BOX_ID,
-                            )
-
-                except StopAsyncIteration:
-                    raise
-
-                self.result = self.chat_interactions[-1].answer
-
-            def _handle_response(resp):
-                self.chat_interactions[-1].answer = resp.choices[0].message.content
-                self.result = self.chat_interactions[-1].answer
-                # yield rx.scroll_to(
-                #     elem_id=INPUT_BOX_ID,
-                # )
-
-            if stream_resp:
-                yield _handle_streaming_response(resp)
-            else:
-                yield _handle_response(resp)
-
-        # self._save_resulting_chat_interaction(chat_interaction=self.chat_interactions[-1])
+        self._save_resulting_chat_interaction(chat_interaction=self.chat_interactions[-1])

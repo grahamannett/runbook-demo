@@ -65,3 +65,8 @@ uv.lock
 
 __pycache__/
 saved/rag/
+
+# ignore database stuff until finalize schema/structure
+alembic/
+alembic.ini
+reflex.db

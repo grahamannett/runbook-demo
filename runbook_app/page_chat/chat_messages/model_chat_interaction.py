@@ -2,7 +2,7 @@ import datetime
 import zoneinfo
 
 import reflex as rx
-from sqlmodel import Field, func
+from sqlmodel import Field
 
 
 class ChatInteraction(
