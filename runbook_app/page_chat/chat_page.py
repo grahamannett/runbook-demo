@@ -2,15 +2,27 @@ import reflex as rx
 
 from runbook_app.page_chat.chat_body import chat_body
 from runbook_app.page_chat.chat_state import ChatState
-from runbook_app.page_chat.style import Style
 from runbook_app.templates.input_box import input_box
 from runbook_app.templates.pop_up import LibraryPrompt
+from runbook_app.templates.style import BaseStyle
 from runbook_app.templates.top_bar import nav_bar
 
-STYLE: Style = Style()
+body_style: BaseStyle = BaseStyle(
+    width="100%",
+    max_width="50em",
+    height="100%",
+    display="flex",
+    overflow="hidden",
+    padding_bottom="30px",
+    margin_inline="auto",
+)
 
-chat_page_body_style: dict[str, str] = STYLE.body
-chat_page_parent_style: dict[str, str] = STYLE.parent
+parent_style: BaseStyle = BaseStyle(
+    gap="40px",
+    z_index="10",
+    width="100%",
+    height="100%",
+)
 
 
 def chat_page(
@@ -39,9 +51,9 @@ def chat_page(
                         library_prompt=library_prompt,
                         input_box_id=input_box_id,
                     ),
-                    **chat_page_body_style,
+                    **body_style,
                 ),
-                **chat_page_parent_style,
+                **parent_style,
             ),
         )
     )

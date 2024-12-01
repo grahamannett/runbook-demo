@@ -4,10 +4,9 @@ import reflex as rx
 
 from runbook_app.components.badges import badge_with_icon
 from runbook_app.components.buttons import button_with_icon
-from runbook_app.components.typography import text_with_icon
-
-from .search_box import search_bar_with_sidebar_shortcut
-from .select import select_menu
+from runbook_app.rag_tools import load_all_documents
+from runbook_app.templates.search_box import search_bar_with_sidebar_shortcut
+from runbook_app.templates.select import select_menu
 
 __prompts__ = []
 
@@ -22,10 +21,47 @@ class PromptLibrary(rx.State):
 class LibraryPrompt(rx.State):
     is_open: bool = False
 
-    def toggle_prompt_library(
-        self,
-    ) -> None:
+    def toggle_prompt_library(self) -> None:
         self.is_open = not self.is_open
+
+
+class DocumentLibrary(rx.State):
+    """State for managing document library."""
+
+    is_open: bool = False
+
+    documents: list[dict] = []  # List of loaded documents
+    url_input: str = ""  # URL input field
+    processing: bool = False
+    error: str = ""
+
+    def load_all_documents(self) -> None:
+        """Load all documents from the configured source."""
+        try:
+            self.documents = load_all_documents()
+            self.error = ""
+        except Exception as e:
+            self.error = f"Error loading documents: {str(e)}"
+
+    def toggle_document_library(self) -> None:
+        self.is_open = not self.is_open
+
+    def process_url(self):
+        """Process the input URL and add it to documents."""
+        if not self.url_input:
+            self.error = "Please enter a URL"
+            return
+        print(f"Processing URL: {self.url_input}")
+        # try:
+        #     success = get_html_document(self.url_input)
+        #     if success:
+        #         self.url_input = ""
+        #     else:
+        #         self.error = "Failed to process URL"
+        # except Exception as e:
+        #     self.error = f"Error processing URL: {str(e)}"
+        # finally:
+        #     self.processing = False
 
 
 border = rx.color_mode_cond(
@@ -49,30 +85,13 @@ def popup_menu():
         ),
         rx.hstack(
             rx.hstack(
-                text_with_icon(
-                    "book",
-                    "My prompts",
-                    padding="10px",
-                    background=background,
-                    box_shadow=box_shadow,
-                    border_radius="8px",
-                ),
-                text_with_icon(
-                    "users",
-                    "Community",
-                    padding="10px",
-                    border=border,
-                    border_radius="8px",
-                ),
-                width="100%",
-                justify="start",
-            ),
-            rx.hstack(
                 button_with_icon(
                     "Create",
                     "plus",
+                    disabled=True,
                     on_click=PromptLibrary.create_new_prompt_entry,
                 ),
+                rx.spacer(),
                 rx.box(
                     rx.icon(tag="folder", size=15, color=rx.color("slate", 11)),
                     border=border,

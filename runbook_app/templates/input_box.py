@@ -2,6 +2,7 @@ from typing import Callable
 
 import reflex as rx
 
+from runbook_app.components.badges import badge_with_icon
 from runbook_app.components.buttons import button_with_icon
 
 from .pop_up import DocumentLibrary, LibraryPrompt
@@ -28,26 +29,77 @@ def use_library_button(library_prompt: LibraryPrompt, input_box_id: str):
     )
 
 
-def use_document_button():
-    def on_click():
-        return rx.toast("Document button clicked!")
+def list_of_document_components(border: str):
+    # Document list
+    return rx.vstack(
+        rx.foreach(
+            DocumentLibrary.documents,
+            lambda doc: rx.hstack(
+                rx.vstack(
+                    rx.heading(doc["title"], size="sm"),
+                    rx.text(doc["url"], font_size="xs", color="gray"),
+                    align_items="start",
+                ),
+                rx.spacer(),
+                badge_with_icon("View", "eye"),
+                width="100%",
+                padding="2",
+                border_bottom=border,
+            ),
+        ),
+        width="100%",
+        max_height="400px",
+        overflow_y="auto",
+    )
 
-    return rx.button(
-        rx.icon(tag="panel-top", size=18),
-        "Documents",
-        radius="large",
-        cursor="pointer",
-        padding="18px 16px",
-        bg="transparent",
-        border=rx.color_mode_cond(
-            light="1px solid indigo",
-            dark="1px solid slate",
+
+def use_document_library():
+    return rx.dialog.root(
+        rx.dialog.trigger(
+            button_with_icon(
+                "Documents",
+                "panel-top",
+                on_click=DocumentLibrary.toggle_document_library,
+            )
         ),
-        color=rx.color(
-            color="slate",
-            shade=11,
+        rx.dialog.content(
+            rx.dialog.title(
+                rx.text("Document Library"),
+                # rx.dialog.description("View loaded documents and add new ones by URL."),
+            ),
+            rx.vstack(
+                # URL Input section
+                rx.form(
+                    rx.hstack(
+                        rx.input(
+                            placeholder="Enter document URL...",
+                            value=DocumentLibrary.url_input,
+                            on_change=DocumentLibrary.set_url_input,
+                            width="100%",
+                        ),
+                        rx.button(
+                            "Add",
+                            type="submit",
+                            is_loading=DocumentLibrary.processing,
+                        ),
+                    ),
+                    on_submit=DocumentLibrary.process_url,
+                ),
+                rx.cond(
+                    DocumentLibrary.error,
+                    rx.text(
+                        DocumentLibrary.error,
+                        color="red",
+                        font_size="sm",
+                    ),
+                ),
+                width="100%",
+                spacing="4",
+            ),
+            rx.dialog.close(
+                rx.icon(tag="x"),
+            ),
         ),
-        on_click=on_click,
     )
 
 
@@ -94,7 +146,7 @@ def input_box(
             rx.hstack(
                 use_library_button(library_prompt=library_prompt, input_box_id=input_box_id),
                 rx.spacer(),
-                use_document_button(),
+                use_document_library(),
                 display="flex",
                 align="center",
             ),

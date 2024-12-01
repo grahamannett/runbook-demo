@@ -3,25 +3,17 @@ from typing import Any, Callable
 
 import reflex as rx
 
+from runbook_app.components.loading_icon import loading_icon
 from runbook_app.page_chat.chat_state import AuthState
+from runbook_app.templates.style import BaseStyle
 
-from .loading_icon import loading_icon
-
-
-@dataclass
-class Style:
-    default: dict[str, str | rx.Component] = field(
-        default_factory=lambda: {
-            "radius": "large",
-            "cursor": "pointer",
-            "padding": "18px 16px",
-        },
-    )
-
-
-BUTTON_STYLE: Style = Style()
-
-button_style: dict[str, Any] = BUTTON_STYLE.default
+ButtonStyle = BaseStyle(
+    **{
+        "radius": "large",
+        "cursor": "pointer",
+        "padding": "18px 16px",
+    },
+)
 
 
 def logout_button():
@@ -30,7 +22,7 @@ def logout_button():
         "Logout",
         on_click=AuthState.logout,
         **{
-            **button_style,
+            **ButtonStyle,
             "background": "salmon",
         },
     )
@@ -73,7 +65,7 @@ def button_with_icon(
                 justify="center",
             ),
         ),
-        **button_style,
-        **kwargs,
         on_click=on_click,
+        **ButtonStyle,
+        **kwargs,
     )

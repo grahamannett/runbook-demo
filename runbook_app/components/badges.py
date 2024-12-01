@@ -1,29 +1,23 @@
-from __future__ import annotations
-
-from dataclasses import dataclass, field
-
 import reflex as rx
 
+from runbook_app.templates.style import BaseStyle
 
-@dataclass
-class Style:
-    default: dict[str, str | rx.Component] = field(
-        default_factory=lambda: {
-            "width": "35px",
-            "height": "35px",
-            "border_radius": "4px",
-            "box_shadow": "0px 1px 3px rgba(25, 33, 61, 0.1)",
-            "background": rx.color_mode_cond(
-                rx.color(
-                    color="indigo",
-                    shade=1,
-                ),
-                "#49557A",
+BadgeStyle = BaseStyle(
+    **{
+        "width": "35px",
+        "height": "35px",
+        "border_radius": "4px",
+        "box_shadow": "0px 1px 3px rgba(25, 33, 61, 0.1)",
+        "background": rx.color_mode_cond(
+            rx.color(
+                color="indigo",
+                shade=1,
             ),
-        },
-    )
+            "#49557A",
+        ),
+    }
+)
 
-STYLE: Style = Style()
 
 def badge_with_icon(
     icon: str,
@@ -35,7 +29,7 @@ def badge_with_icon(
             stroke_width="2px",
             color=f"{rx.color('slate', 11, True)}",
         ),
-        **STYLE.default,
+        **BadgeStyle,
         display="flex",
         align_items="center",
         justify_content="center",
@@ -71,6 +65,6 @@ def sidebar_shortcut(
             justify="center",
             gap="4px",
         ),
-        **STYLE.default,
+        **BadgeStyle,
         **kwargs,
     )

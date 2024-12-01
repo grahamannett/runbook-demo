@@ -1,39 +1,32 @@
-from dataclasses import dataclass, field
-
 import reflex as rx
 
 from runbook_app.components.badges import sidebar_shortcut
+from runbook_app.templates.style import BaseStyle
 
-
-@dataclass
-class Style:
-    default: dict[str, str | rx.Component] = field(
-        default_factory=lambda: {
-            "spacing": "1",
-            "display": "flex",
-            "align": "center",
-            "border_radius": "8px",
-            "padding": "5px 5px 5px 10px",
-            "border": rx.color_mode_cond(
-                f"1px solid {rx.color('indigo', 3)}",
-                f"1px solid {rx.color('slate', 7, True)}",
+SearchBarStyle = BaseStyle(
+    **{
+        "spacing": "1",
+        "display": "flex",
+        "align": "center",
+        "border_radius": "8px",
+        "padding": "5px 5px 5px 10px",
+        "border": rx.color_mode_cond(
+            f"1px solid {rx.color('indigo', 3)}",
+            f"1px solid {rx.color('slate', 7, True)}",
+        ),
+        "background": rx.color_mode_cond(
+            rx.color(
+                "indigo",
+                1,
             ),
-            "background": rx.color_mode_cond(
-                rx.color(
-                    "indigo",
-                    1,
-                ),
-                "",
-            ),
-            "box_shadow": rx.color_mode_cond(
-                "0px 1px 3px rgba(25, 33, 61, 0.1)",
-                "none",
-            ),
-        },
-    )
-
-
-SEARCH_BAR_STYLE: Style = Style()
+            "",
+        ),
+        "box_shadow": rx.color_mode_cond(
+            "0px 1px 3px rgba(25, 33, 61, 0.1)",
+            "none",
+        ),
+    }
+)
 
 
 def _search_bar_base(
@@ -53,14 +46,14 @@ def _search_bar_base(
         rx.input(
             variant="soft",
             outline="none",
-            placeholder="Search for chats...",
+            placeholder="Search for a runbook...",
             background_color="transparent",
             color=rx.color("slate", 11),
         ),
         rx.spacer(),
         *args,
         **kwargs,
-        **SEARCH_BAR_STYLE.default,
+        **SearchBarStyle,
     )
 
 
