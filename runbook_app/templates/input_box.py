@@ -5,7 +5,7 @@ import reflex as rx
 from runbook_app.components.badges import badge_with_icon
 from runbook_app.components.buttons import button_with_icon
 
-from .pop_up import DocumentLibrary, LibraryPrompt
+from .pop_up import LibraryDocument, LibraryPrompt
 
 
 def use_library_button(library_prompt: LibraryPrompt, input_box_id: str):
@@ -33,7 +33,7 @@ def list_of_document_components(border: str):
     # Document list
     return rx.vstack(
         rx.foreach(
-            DocumentLibrary.documents,
+            LibraryDocument.documents,
             lambda doc: rx.hstack(
                 rx.vstack(
                     rx.heading(doc["title"], size="sm"),
@@ -59,7 +59,7 @@ def use_document_library():
             button_with_icon(
                 "Documents",
                 "panel-top",
-                on_click=DocumentLibrary.toggle_document_library,
+                on_click=LibraryDocument.toggle_document_library,
             )
         ),
         rx.dialog.content(
@@ -73,22 +73,22 @@ def use_document_library():
                     rx.hstack(
                         rx.input(
                             placeholder="Enter document URL...",
-                            value=DocumentLibrary.url_input,
-                            on_change=DocumentLibrary.set_url_input,
+                            value=LibraryDocument.url_input,
+                            on_change=LibraryDocument.set_url_input,
                             width="100%",
                         ),
                         rx.button(
                             "Add",
                             type="submit",
-                            is_loading=DocumentLibrary.processing,
+                            is_loading=LibraryDocument.processing,
                         ),
                     ),
-                    on_submit=DocumentLibrary.process_url,
+                    on_submit=LibraryDocument.process_url,
                 ),
                 rx.cond(
-                    DocumentLibrary.error,
+                    LibraryDocument.error,
                     rx.text(
-                        DocumentLibrary.error,
+                        LibraryDocument.error,
                         color="red",
                         font_size="sm",
                     ),

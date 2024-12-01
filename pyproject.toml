@@ -4,7 +4,7 @@
     description = "Add your description here"
     readme = "README.md"
     authors = [{ name = "graham", email = "graham.annett@gmail.com" }]
-    requires-python = ">=3.13"
+    requires-python = ">=3.12"
     dependencies = []
 
     [project.scripts]
@@ -15,7 +15,10 @@
     build-backend = "hatchling.build"
 
 [dependency-groups]
-    dev = ["reflex>=0.6.5"]
+dev = [
+    "pytest>=8.3.3",
+    "reflex>=0.6.5",
+]
 
 [tool.ruff]
     line-length = 120

@@ -25,7 +25,7 @@ class LibraryPrompt(rx.State):
         self.is_open = not self.is_open
 
 
-class DocumentLibrary(rx.State):
+class LibraryDocument(rx.State):
     """State for managing document library."""
 
     is_open: bool = False
@@ -36,47 +36,48 @@ class DocumentLibrary(rx.State):
     error: str = ""
 
     def load_all_documents(self) -> None:
-        """Load all documents from the configured source."""
-        try:
-            self.documents = load_all_documents()
-            self.error = ""
-        except Exception as e:
-            self.error = f"Error loading documents: {str(e)}"
+        """
+        Load all documents from the configured source.
+
+        will need:
+        self.documents = load_all_documents()
+
+        """
+        print(f"loading all documents...")
 
     def toggle_document_library(self) -> None:
         self.is_open = not self.is_open
 
     def process_url(self):
-        """Process the input URL and add it to documents."""
+        """
+        Process the input URL and add it to documents.
+
+        Will need:
+        self.processing = True
+        document = get_html_document(self.url_input)
+        ...add document to storage...
+        self.processing = False
+
+        """
         if not self.url_input:
             self.error = "Please enter a URL"
             return
         print(f"Processing URL: {self.url_input}")
-        # try:
-        #     success = get_html_document(self.url_input)
-        #     if success:
-        #         self.url_input = ""
-        #     else:
-        #         self.error = "Failed to process URL"
-        # except Exception as e:
-        #     self.error = f"Error processing URL: {str(e)}"
-        # finally:
-        #     self.processing = False
-
-
-border = rx.color_mode_cond(
-    f"1px solid {rx.color('indigo', 3)}",
-    f"1px solid {rx.color('slate', 7, True)}",
-)
-background = rx.color_mode_cond(
-    rx.color("indigo", 1),
-    rx.color("indigo", 3),
-)
-
-box_shadow = rx.color_mode_cond("0px 1px 3px rgba(25, 33, 61, 0.1)", "none")
 
 
 def popup_menu():
+    border = rx.color_mode_cond(
+        f"1px solid {rx.color('indigo', 3)}",
+        f"1px solid {rx.color('slate', 7, True)}",
+    )
+
+    background = rx.color_mode_cond(
+        rx.color("indigo", 1),
+        rx.color("indigo", 3),
+    )
+
+    box_shadow = rx.color_mode_cond("0px 1px 3px rgba(25, 33, 61, 0.1)", "none")
+
     return rx.vstack(
         rx.hstack(
             search_bar_with_sidebar_shortcut(width="100%"),
@@ -152,14 +153,15 @@ def prompt_item(
     )
 
 
-prompts = rx.vstack(
-    *[prompt_item(title, description) for title, description in __prompts__],
-    width="100%",
-    height="30em",
-    overflow="scroll",
-    spacing="5",
-    padding="16px 0px",
-)
+def list_prompt_component(prompt_items: list[dict]):
+    return rx.vstack(
+        *[prompt_item(title, description) for title, description in prompt_items],
+        width="100%",
+        height="30em",
+        overflow="scroll",
+        spacing="5",
+        padding="16px 0px",
+    )
 
 
 def dialog_library_base(
@@ -205,7 +207,7 @@ def dialog_library_base(
             ),
             height="40em",
             overflow="hidden",
-            on_interact_outside=LibraryPrompt.toggle_prompt_library(),
+            on_interact_outside=LibraryPrompt.toggle_prompt_library,
         ),
         open=LibraryPrompt.is_open,
     )
@@ -213,6 +215,6 @@ def dialog_library_base(
 
 def dialog_library():
     return dialog_library_base(
-        prompts,
+        list_prompt_component(prompt_items=__prompts__),
         on_create_new_chat=PromptLibrary.create_new_prompt_entry,
     )

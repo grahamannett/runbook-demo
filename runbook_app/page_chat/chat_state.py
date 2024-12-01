@@ -1,64 +1,37 @@
 import datetime
+import functools
 import os
 import zoneinfo
 
 import reflex as rx
-
-# Import open-telemetry dependencies
 from sqlalchemy import column, or_, select
 from together import Together
 
-from runbook_app.llm_tools import create_messages_for_chat_completion
+from runbook_app.components.auth_signin import signin
+from runbook_app.dev_utils import is_dev_mode
+from runbook_app.llm_tools import create_messages_for_chat_completion, get_ai_client, get_ai_model
 from runbook_app.page_chat.chat_messages.model_chat_interaction import ChatInteraction
-
-AI_MODEL: str = "UNKNOWN"
-OTEL_HEADERS: str | None = None
-OTEL_ENDPOINT: str | None = None
-RUN_WITH_OTEL: bool = False
-
-
-def get_ai_client() -> Together:
-    ai_provider = os.environ.get("AI_PROVIDER")
-    match ai_provider:
-        case "ollama":
-            return Together(
-                base_url="http://localhost:11434/v1",
-                api_key="ollama",
-            )
-
-        case "together":
-            return Together(
-                api_key=os.environ.get("TOGETHER_API_KEY"),
-            )
-        case "openai":
-            raise NotImplementedError("Only using Ollama/Together for now")
-
-        case _:
-            print("Invalid AI provider, please set AI_PROVIDER environment variable")
-
-
-def get_ai_model() -> None:
-    global AI_MODEL
-    ai_model = os.environ.get("AI_PROVIDER")
-    match ai_model:
-        case "ollama":
-            AI_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2-vision:11b")
-        case "openai":
-            raise NotImplementedError("Only using Ollama/Together for now")
-        case "together":
-            AI_MODEL = "meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo"
-
-        case _:
-            print("Invalid AI provider. Please set AI_PROVIDER environment variable")
-
-
-model_name = get_ai_model()
-
-
-# Set the tracer provider
 
 MAX_QUESTIONS = 10
 INPUT_BOX_ID = "input-box"
+AI_MODEL_NAME = get_ai_model()
+
+
+def require_login(page: rx.app.ComponentCallable) -> rx.app.ComponentCallable:
+    if is_dev_mode():
+        return page
+
+    @functools.wraps(page)
+    def protected_page() -> rx.Component:
+        return rx.box(
+            rx.cond(
+                AuthState.is_hydrated,
+                rx.cond(AuthState.valid_session, page(), signin(on_submit_signin=AuthState.handle_submit)),
+                rx.spinner(),
+            ),
+        )
+
+    return protected_page
 
 
 class AuthState(rx.State):
@@ -80,6 +53,7 @@ class ChatState(rx.State):
     filter_str: str = ""
 
     _ai_client_instance: Together | None = None
+    _ai_model: str = AI_MODEL_NAME
     _ai_chat_instance = None
 
     has_checked_database: bool = False
@@ -88,7 +62,7 @@ class ChatState(rx.State):
     chat_interactions: list[ChatInteraction] = []
 
     has_token: bool = True
-    username: str = "Runbook User"
+    username: str = "Runbook"
     prompt: str = ""
     result: str = ""
     ai_loading: bool = False
@@ -233,7 +207,7 @@ class ChatState(rx.State):
             messages = create_messages_for_chat_completion(self.chat_interactions, prompt)
             client_instance: Together = self._get_client_instance()
             resp = client_instance.chat.completions.create(
-                model=AI_MODEL,
+                model=self._ai_model,
                 messages=messages,
                 max_tokens=512,
                 temperature=0.7,
