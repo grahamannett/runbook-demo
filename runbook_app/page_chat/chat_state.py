@@ -1,20 +1,26 @@
-import datetime
 import functools
 import os
-import zoneinfo
+from datetime import datetime
+from typing import Sequence
 
 import reflex as rx
-from sqlalchemy import column, or_, select
+from sqlalchemy import select
 from together import Together
 
 from runbook_app.components.auth_signin import signin
+from runbook_app.db_models import ChatInteraction, Document, Runbook
+from runbook_app.db_ops import (
+    create_new_runbook,
+    fetch_messages,
+    get_runbook_chat_interactions,
+    get_runbooks,
+)
 from runbook_app.dev_utils import is_dev_mode
-from runbook_app.llm_tools import create_messages_for_chat_completion, get_ai_client, get_ai_model
-from runbook_app.page_chat.chat_messages.model_chat_interaction import ChatInteraction
+from runbook_app.llm_tools import LLMConfig, create_messages_for_chat_completion, get_ai_client, get_ai_model
+from rxconstants import tz
 
 MAX_QUESTIONS = 10
 INPUT_BOX_ID = "input-box"
-AI_MODEL_NAME = get_ai_model()
 
 
 def require_login(page: rx.app.ComponentCallable) -> rx.app.ComponentCallable:
@@ -53,20 +59,27 @@ class ChatState(rx.State):
     filter_str: str = ""
 
     _ai_client_instance: Together | None = None
-    _ai_model: str = AI_MODEL_NAME
+    _ai_model: str | None = None
     _ai_chat_instance = None
 
     has_checked_database: bool = False
     stream_resp: bool = True
 
+    runbook_id: int | None = None
+    runbooks: list[Runbook] = []
     chat_interactions: list[ChatInteraction] = []
+    documents: list[Document]
 
     has_token: bool = True
-    username: str = "Runbook"
+    username: str = "user"
     prompt: str = ""
     result: str = ""
     ai_loading: bool = False
-    timestamp: datetime.datetime = datetime.datetime.now(tz=zoneinfo.ZoneInfo("America/Boise"))
+    timestamp: datetime = datetime.now(tz=tz)
+
+    ai_provider: str = LLMConfig.ai_provider
+    ai_provider_url: str = LLMConfig.ai_provider_url
+    ai_provider_api_key: str = LLMConfig.ai_provider_api_key
 
     @rx.var
     def timestamp_formatted(
@@ -74,54 +87,50 @@ class ChatState(rx.State):
     ) -> str:
         return self.timestamp.strftime("%I:%M %p")
 
+    def load_all_documents(self) -> None:
+        print("loading all documents...")
+
+    def processes_url(self, data: dict) -> None:
+        print(f"processing url: {data}")
+
+    def print_ai_info(self) -> None:
+        print(f"AI_PROVIDER: {self.ai_provider}")
+        print(f"AI_PROVIDER_URL: {self.ai_provider_url}")
+        print(f"AI_PROVIDER_API_KEY: {self.ai_provider_api_key}")
+
     def _get_client_instance(
         self,
     ) -> Together:
         if self._ai_client_instance is not None:
             return self._ai_client_instance
 
-        if ai_client_instance := get_ai_client():
+        if ai_client_instance := get_ai_client(
+            ai_provider=self.ai_provider,
+            ai_provider_url=self.ai_provider_url,
+            ai_provider_api_key=self.ai_provider_api_key,
+        ):
             self._ai_client_instance = ai_client_instance
+            self._ai_model = get_ai_model(ai_provider=self.ai_provider)
             return ai_client_instance
 
         raise ValueError("AI client not found")
 
-    def _fetch_messages(
-        self,
-    ) -> list[ChatInteraction]:
-        # if not self.has_checked_database:
-        with rx.session() as session:
-            # self.has_checked_database = True
-            query = select(ChatInteraction)
-            if self.filter_str:
-                query = query.where(
-                    or_(
-                        column(ChatInteraction.prompt).contains(self.filter_str),
-                        column(ChatInteraction.answer).contains(self.filter_str),
-                    ),
-                )
+    def _fetch_messages(self) -> Sequence[ChatInteraction]:
+        return fetch_messages(username=self.username, prompt=self.prompt)
 
-            result = (
-                session.exec(
-                    query.order_by(ChatInteraction.timestamp.desc()).limit(MAX_QUESTIONS),
-                )
-                .scalars()
-                .all()
-            )
+    def on_load_index(self) -> None:
+        self.runbooks = list(get_runbooks(username=self.username))
+        if len(self.runbooks) <= 0:
+            self.runbooks = [create_new_runbook(username=self.username)]
 
-            return result
+        if self.runbook_id is None:
+            self.runbook_id = self.runbooks[0].id
 
-        return []
+        self.chat_interactions = get_runbook_chat_interactions(runbook_id=self.runbook_id)
 
     def get_html_document(self, url: str) -> None:
         # Create directory if it doesn't exist
         os.makedirs("runbook-documents", exist_ok=True)
-
-    def load_messages_from_database(
-        self,
-    ) -> None:
-        self.chat_interactions = self._fetch_messages()
-        print(f"Messages for current chat loaded: {len(self.chat_interactions)}")
 
     def set_prompt(
         self,
@@ -145,26 +154,25 @@ class ChatState(rx.State):
             session.commit()
             session.refresh(chat_interaction)
 
-    async def _check_saved_chat_interactions(
-        self,
-        username: str,
-        prompt: str,
-    ) -> bool:
+    def _check_saved_chat_interactions(self, username: str, prompt: str) -> bool:
         with rx.session() as session:
-            asked_previously = session.exec(
+            query = (
                 select(ChatInteraction)
                 .where(
                     ChatInteraction.chat_participant_user_name == username,
                 )
                 .where(
                     ChatInteraction.prompt == prompt,
-                ),
-            ).scalar_one_or_none()
+                )
+                .where(
+                    ChatInteraction.interaction_id == self.runbook_id,
+                )
+            )
 
-            if asked_previously:
-                return True
+            asked_previously = session.exec(query)
 
-            return False
+            asked_previously = asked_previously.scalar_one_or_none()
+            return asked_previously is not None
 
     async def _process_response(self, resp):
         """Process the response from the chat completion, handling both streaming and non-streaming cases.
@@ -236,6 +244,7 @@ class ChatState(rx.State):
                     prompt=prompt,
                     answer="",
                     chat_participant_user_name=self.username,
+                    interaction_id=self.runbook_id,
                 ),
             )
             self.prompt = ""
@@ -248,7 +257,7 @@ class ChatState(rx.State):
         if self.username == "":
             raise ValueError("Username is required")
 
-        if prev_exists := await self._check_saved_chat_interactions(
+        if prev_exists := self._check_saved_chat_interactions(
             prompt=prompt,
             username=self.username,
         ):

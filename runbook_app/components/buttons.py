@@ -1,10 +1,9 @@
-from dataclasses import dataclass, field
 from typing import Any, Callable
 
 import reflex as rx
 
 from runbook_app.components.loading_icon import loading_icon
-from runbook_app.page_chat.chat_state import AuthState
+from runbook_app.page_chat.chat_state import AuthState, ChatState
 from runbook_app.templates.style import BaseStyle
 
 ButtonStyle = BaseStyle(
@@ -68,4 +67,76 @@ def button_with_icon(
         on_click=on_click,
         **ButtonStyle,
         **kwargs,
+    )
+
+
+def llm_provider_dialog():
+    return rx.dialog.root(
+        rx.dialog.trigger(rx.icon(tag="cherry")),
+        rx.dialog.content(
+            rx.dialog.title("Edit Provider"),
+            rx.dialog.description(
+                "Change provider and API key.",
+                size="2",
+                margin_bottom="16px",
+            ),
+            rx.flex(
+                rx.text(
+                    "Provider",
+                    as_="div",
+                    size="2",
+                    margin_bottom="4px",
+                    weight="bold",
+                ),
+                rx.input(
+                    default_value=ChatState.ai_provider,
+                    placeholder="Pick provider",
+                    on_blur=ChatState.set_ai_provider,
+                ),
+                rx.text(
+                    "Endpoint URL",
+                    as_="div",
+                    size="2",
+                    margin_bottom="4px",
+                    weight="bold",
+                ),
+                rx.input(
+                    default_value=ChatState.ai_provider_url,
+                    placeholder="Enter the endpoint URL",
+                    on_blur=ChatState.set_ai_provider_url,
+                ),
+                rx.text(
+                    "API Key",
+                    as_="div",
+                    size="2",
+                    margin_bottom="4px",
+                    weight="bold",
+                ),
+                rx.input(
+                    default_value=ChatState.ai_provider_api_key,
+                    placeholder="Enter the API key",
+                    on_blur=ChatState.set_ai_provider_api_key,
+                ),
+                direction="column",
+                spacing="3",
+            ),
+            rx.flex(
+                rx.dialog.close(
+                    rx.button(
+                        "Cancel",
+                        color_scheme="gray",
+                        variant="soft",
+                    ),
+                ),
+                rx.dialog.close(
+                    rx.button("Save"),
+                ),
+                # rx.dialog.close(
+                #     rx.button("Print info", on_click=ChatState.print_ai_info),
+                # ),
+                spacing="3",
+                margin_top="16px",
+                justify="end",
+            ),
+        ),
     )

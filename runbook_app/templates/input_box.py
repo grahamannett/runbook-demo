@@ -4,8 +4,8 @@ import reflex as rx
 
 from runbook_app.components.badges import badge_with_icon
 from runbook_app.components.buttons import button_with_icon
-
-from .pop_up import LibraryDocument, LibraryPrompt
+from runbook_app.page_chat.chat_state import ChatState
+from runbook_app.templates.pop_up import LibraryDocument, LibraryPrompt
 
 
 def use_library_button(library_prompt: LibraryPrompt, input_box_id: str):
@@ -33,7 +33,7 @@ def list_of_document_components(border: str):
     # Document list
     return rx.vstack(
         rx.foreach(
-            LibraryDocument.documents,
+            ChatState.documents,
             lambda doc: rx.hstack(
                 rx.vstack(
                     rx.heading(doc["title"], size="sm"),
@@ -73,26 +73,26 @@ def use_document_library():
                     rx.hstack(
                         rx.input(
                             placeholder="Enter document URL...",
-                            value=LibraryDocument.url_input,
-                            on_change=LibraryDocument.set_url_input,
+                            # value=LibraryDocument.url_input,
+                            # on_change=LibraryDocument.set_url_input,
                             width="100%",
                         ),
                         rx.button(
                             "Add",
                             type="submit",
-                            is_loading=LibraryDocument.processing,
+                            # is_loading=LibraryDocument.processing,
                         ),
                     ),
-                    on_submit=LibraryDocument.process_url,
+                    # on_submit=ChatState.process_url,
                 ),
-                rx.cond(
-                    LibraryDocument.error,
-                    rx.text(
-                        LibraryDocument.error,
-                        color="red",
-                        font_size="sm",
-                    ),
-                ),
+                # rx.cond(
+                #     LibraryDocument.error,
+                #     rx.text(
+                #         LibraryDocument.error,
+                #         color="red",
+                #         font_size="sm",
+                #     ),
+                # ),
                 width="100%",
                 spacing="4",
             ),

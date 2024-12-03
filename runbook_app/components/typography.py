@@ -64,8 +64,21 @@ def sidebar_text(
 
 def msg_header(
     header_title: str,
-    date: datetime.datetime,
+    date: datetime.datetime | None = None,
 ):
+    def ts_component():
+        if date is None:
+            return rx.box()
+        return rx.moment(
+            date,
+            format="HH:mm:ss",
+            color=rx.color(
+                color="slate",
+                shade=11,
+            ),
+            weight="medium",
+        )
+
     return rx.hstack(
         rx.text(
             header_title,
@@ -80,15 +93,7 @@ def msg_header(
             color_scheme="gray",
             height="20px",
         ),
-        rx.moment(
-            date,
-            format="HH:mm:ss",
-            color=rx.color(
-                color="slate",
-                shade=11,
-            ),
-            weight="medium",
-        ),
+        ts_component(),
         display="flex",
         align="center",
     )

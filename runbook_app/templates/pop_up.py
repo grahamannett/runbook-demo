@@ -30,39 +30,8 @@ class LibraryDocument(rx.State):
 
     is_open: bool = False
 
-    documents: list[dict] = []  # List of loaded documents
-    url_input: str = ""  # URL input field
-    processing: bool = False
-    error: str = ""
-
-    def load_all_documents(self) -> None:
-        """
-        Load all documents from the configured source.
-
-        will need:
-        self.documents = load_all_documents()
-
-        """
-        print(f"loading all documents...")
-
     def toggle_document_library(self) -> None:
         self.is_open = not self.is_open
-
-    def process_url(self):
-        """
-        Process the input URL and add it to documents.
-
-        Will need:
-        self.processing = True
-        document = get_html_document(self.url_input)
-        ...add document to storage...
-        self.processing = False
-
-        """
-        if not self.url_input:
-            self.error = "Please enter a URL"
-            return
-        print(f"Processing URL: {self.url_input}")
 
 
 def popup_menu():

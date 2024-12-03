@@ -16,4 +16,8 @@ def index():
     return chat_page(input_box_id=INPUT_BOX_ID)
 
 
-app.add_page(index, route="/", on_load=[ChatState.load_messages_from_database, LibraryDocument.load_all_documents])
+app.add_page(
+    index,
+    route="/",
+    on_load=ChatState.on_load_index,
+)

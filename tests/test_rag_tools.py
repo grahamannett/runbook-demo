@@ -4,7 +4,7 @@ from datetime import datetime
 import pytest
 import reflex as rx
 
-from runbook_app.page_chat.chat_messages.model_chat_interaction import HTMLPage
+from runbook_app.db_models import HTMLSource
 from runbook_app.rag_tools import (
     _save_doc_to_db,
     _save_doc_to_file,
@@ -62,7 +62,7 @@ def setup_db_documents(sample_documents):
     # Cleanup: remove test database entries
     with rx.session(url=test_db_fixture) as session:
         for doc_id in saved_ids:
-            session.query(HTMLPage).filter(HTMLPage.id == doc_id).delete()
+            session.query(HTMLSource).filter(HTMLSource.id == doc_id).delete()
         session.commit()
 
 

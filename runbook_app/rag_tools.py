@@ -5,7 +5,7 @@ from urllib.request import urlopen
 
 import reflex as rx
 
-from runbook_app.page_chat.chat_messages.model_chat_interaction import HTMLPage
+from runbook_app.db_models import HTMLSource
 from rxconstants import rag_documents, saved_rag_documents
 
 
@@ -26,7 +26,7 @@ def _save_doc_to_file(data: str, title: str, url: str) -> str:
 
 def _save_doc_to_db(data: str, title: str, url: str, db_url: str | None = None) -> int | None:
     with rx.session(url=db_url) as session:
-        page = HTMLPage(title=title, content=data, url=url)
+        page = HTMLSource(title=title, content=data, url=url)
         session.add(page)
         session.commit()
         return page.id
@@ -54,7 +54,7 @@ def _load_docs_from_db(db_url: str | None = None) -> list[dict]:
     documents = []
     try:
         with rx.session(url=db_url) as session:
-            pages = session.query(HTMLPage).all()
+            pages = session.query(HTMLSource).all()
             for page in pages:
                 doc = {
                     "url": page.url,

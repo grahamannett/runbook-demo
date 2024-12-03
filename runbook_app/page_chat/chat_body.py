@@ -5,8 +5,8 @@ import reflex as rx
 
 from runbook_app.components.dividers import chat_date_divider
 from runbook_app.components.typography import msg_header
-from runbook_app.page_chat.chat_messages.model_chat_interaction import ChatInteraction
-from runbook_app.page_chat.chat_messages.style import ANSWER_STYLE, QUESTION_STYLE
+from runbook_app.db_models import ChatInteraction
+from runbook_app.page_chat.style import ANSWER_STYLE, QUESTION_STYLE
 from runbook_app.templates.pop_up import dialog_library
 
 answer_style_kwargs: dict[str, Any] = ANSWER_STYLE.default
@@ -15,16 +15,18 @@ question_style_kwargs: dict[str, Any] = QUESTION_STYLE.default
 
 def message_part_component(
     *message_children,
-    avatar_url: str,
     user_name: str,
-    timestamp: datetime,
     message: str,
     style_kwargs: dict[str, Any],
+    timestamp: datetime | None = None,
+    avatar_url: str | None = None,
+    avatar_fallback: str = "R",
 ):
     return rx.hstack(
         rx.vstack(
             rx.avatar(
                 src=avatar_url,
+                fallback=avatar_fallback,
                 size="2",
                 border_radius="100%",
             ),
@@ -66,22 +68,21 @@ def message_wrapper(
     return rx.fragment(
         # this component is related to the user input
         message_part_component(
-            avatar_url=chat_interaction.chat_participant_user_avatar_url,
             user_name=chat_interaction.chat_participant_user_name,
             timestamp=chat_interaction.timestamp,
             message=chat_interaction.prompt,
             style_kwargs=question_style_kwargs,
+            avatar_url=chat_interaction.chat_participant_user_avatar_url,
         ),
         # this component is related to the bot response
         message_part_component(
             # bot_response_buttons(),
-            avatar_url=chat_interaction.chat_participant_assistant_avatar_url,
             user_name=chat_interaction.chat_participant_assistant_name,
             timestamp=chat_interaction.timestamp,
             message=chat_interaction.answer,
             style_kwargs=answer_style_kwargs,
+            avatar_url=chat_interaction.chat_participant_assistant_avatar_url,
         ),
-        # bot_response_buttons(),
     )
 
 
