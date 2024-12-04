@@ -12,3 +12,9 @@ saved_rag_documents = "./saved/rag"
 rag_documents = "file"  # table or file, file is easier to inspect
 
 tz = timezone.utc
+
+
+MAX_QUESTIONS = 10
+INPUT_BOX_ID = "input-box"
+
+SCROLL_DOWN_ON_LOAD = False

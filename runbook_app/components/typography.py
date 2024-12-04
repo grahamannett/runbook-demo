@@ -69,6 +69,7 @@ def msg_header(
     def ts_component():
         if date is None:
             return rx.box()
+
         return rx.moment(
             date,
             format="HH:mm:ss",

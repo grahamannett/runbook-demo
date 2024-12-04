@@ -7,7 +7,7 @@ from runbook_app.templates.pop_up import LibraryPrompt
 from runbook_app.templates.style import BaseStyle
 from runbook_app.templates.top_bar import nav_bar
 
-body_style: BaseStyle = BaseStyle(
+body_style = BaseStyle(
     width="100%",
     max_width="50em",
     height="100%",
@@ -17,7 +17,7 @@ body_style: BaseStyle = BaseStyle(
     margin_inline="auto",
 )
 
-parent_style: BaseStyle = BaseStyle(
+parent_style = BaseStyle(
     gap="40px",
     z_index="10",
     width="100%",
@@ -26,7 +26,6 @@ parent_style: BaseStyle = BaseStyle(
 
 
 def chat_page(
-    input_box_id: str,
     chat_state: ChatState = ChatState,
     library_prompt: LibraryPrompt = LibraryPrompt,
 ):
@@ -35,12 +34,10 @@ def chat_page(
             chat_state.is_hydrated,
             rx.box(
                 rx.vstack(
-                    nav_bar(
-                        on_create_new_chat=chat_state.create_new_chat,
-                    ),
+                    nav_bar(chat_state=chat_state),
+                    rx.spacer(),
                     chat_body(
                         chat_interactions=chat_state.chat_interactions,
-                        has_token=chat_state.has_token,
                         divider_title_text=chat_state.timestamp_formatted,
                     ),
                     input_box(
@@ -49,11 +46,10 @@ def chat_page(
                         input_prompt_on_change=chat_state.set_prompt,
                         send_button_on_click=chat_state.submit_prompt,
                         library_prompt=library_prompt,
-                        input_box_id=input_box_id,
                     ),
                     **body_style,
                 ),
                 **parent_style,
             ),
-        )
+        ),
     )

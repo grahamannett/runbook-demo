@@ -3,34 +3,16 @@ from typing import Any, Callable
 import reflex as rx
 
 from runbook_app.components.loading_icon import loading_icon
-from runbook_app.page_chat.chat_state import AuthState, ChatState
+from runbook_app.page_chat.chat_state import ChatState
 from runbook_app.templates.style import BaseStyle
 
-ButtonStyle = BaseStyle(
-    **{
-        "radius": "large",
-        "cursor": "pointer",
-        "padding": "18px 16px",
-    },
-)
-
-
-def logout_button():
-    """Creates a logout button."""
-    return rx.button(
-        "Logout",
-        on_click=AuthState.logout,
-        **{
-            **ButtonStyle,
-            "background": "salmon",
-        },
-    )
+ButtonStyle = BaseStyle(**{"radius": "large", "cursor": "pointer", "padding": "18px 16px"})
 
 
 def button_with_icon(
     text: str,
-    icon: str,
-    on_click: Callable = lambda: None,
+    icon: str | None = None,
+    on_click: Callable | None = None,  #  lambda: None,
     is_loading: bool = False,
     **kwargs,
 ):
@@ -39,6 +21,13 @@ def button_with_icon(
     - icon: The icon tag name.
     - **kwargs: Additional keyword arguments for rx.button.
     """
+
+    def _show_icon():
+        if icon is None:
+            return rx.box()
+
+        return rx.icon(tag=icon, size=18)
+
     return rx.button(
         rx.cond(
             is_loading,
@@ -46,10 +35,7 @@ def button_with_icon(
                 height="1em",
             ),
             rx.hstack(
-                rx.icon(
-                    tag=icon,
-                    size=14,
-                ),
+                _show_icon(),
                 rx.text(
                     text,
                     size="2",
@@ -131,9 +117,6 @@ def llm_provider_dialog():
                 rx.dialog.close(
                     rx.button("Save"),
                 ),
-                # rx.dialog.close(
-                #     rx.button("Print info", on_click=ChatState.print_ai_info),
-                # ),
                 spacing="3",
                 margin_top="16px",
                 justify="end",

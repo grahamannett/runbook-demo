@@ -12,7 +12,7 @@ SharedStyle = BaseStyle(
 
 
 # Question-specific style
-QUESTION_STYLE = BaseStyle(
+UserMessageStyle = BaseStyle(
     **SharedStyle,  # Now we can unpack directly from the style instance
     justify="flex-start",
     align_self="flex-start",
@@ -20,7 +20,7 @@ QUESTION_STYLE = BaseStyle(
 
 
 # Answer-specific style
-ANSWER_STYLE = BaseStyle(
+LLMResponseStyle = BaseStyle(
     **SharedStyle,  # Now we can unpack directly from the style instance
     justify="flex-start",
     align_self="flex-end",

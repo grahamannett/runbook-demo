@@ -1,7 +1,7 @@
 import reflex as rx
 
 from runbook_app.page_chat.chat_page import chat_page
-from runbook_app.page_chat.chat_state import INPUT_BOX_ID, ChatState, require_login
+from runbook_app.page_chat.chat_state import ChatState, require_login
 from runbook_app.templates.pop_up import LibraryDocument
 
 app = rx.App(
@@ -13,11 +13,7 @@ app = rx.App(
 
 @require_login
 def index():
-    return chat_page(input_box_id=INPUT_BOX_ID)
+    return chat_page()
 
 
-app.add_page(
-    index,
-    route="/",
-    on_load=ChatState.on_load_index,
-)
+app.add_page(index, route="/", on_load=[ChatState.on_load_index])

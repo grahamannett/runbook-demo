@@ -6,48 +6,39 @@ import reflex as rx
 from runbook_app.components.dividers import chat_date_divider
 from runbook_app.components.typography import msg_header
 from runbook_app.db_models import ChatInteraction
-from runbook_app.page_chat.style import ANSWER_STYLE, QUESTION_STYLE
+from runbook_app.page_chat.style import LLMResponseStyle, UserMessageStyle
+from runbook_app.templates.action_bar import action_bar
 from runbook_app.templates.pop_up import dialog_library
+from runbook_app.templates.style import BaseStyle
 
-answer_style_kwargs: dict[str, Any] = ANSWER_STYLE.default
-question_style_kwargs: dict[str, Any] = QUESTION_STYLE.default
+AvatarStyle = BaseStyle(**{"fallback": "R", "size": "2", "border_radius": "100%"})
+MessageTextStyle = BaseStyle(
+    **{
+        "width": "100%",
+        "overflow_wrap": "break_word",
+        "color": rx.color(color="slate", shade=11),
+    }
+)
 
 
 def message_part_component(
     *message_children,
-    user_name: str,
-    message: str,
-    style_kwargs: dict[str, Any],
+    avatar: rx.Component,
+    header: rx.Component,
+    message: rx.Component,
+    style_props: dict[str, Any] | BaseStyle = {},
     timestamp: datetime | None = None,
-    avatar_url: str | None = None,
-    avatar_fallback: str = "R",
 ):
-    return rx.hstack(
-        rx.vstack(
-            rx.avatar(
-                src=avatar_url,
-                fallback=avatar_fallback,
-                size="2",
-                border_radius="100%",
-            ),
-        ),
-        rx.vstack(
-            msg_header(
-                header_title=user_name,
-                date=timestamp,
-            ),
-            rx.markdown(
+    return rx.box(
+        rx.hstack(
+            rx.box(avatar),
+            rx.vstack(
+                header,
                 message,
-                color=rx.color(
-                    color="slate",
-                    shade=11,
-                ),
+                *message_children,
             ),
-            *message_children,
-            overflow_wrap="break_word",
-            width="100%",
         ),
-        **style_kwargs,
+        **style_props,
     )
 
 
@@ -61,27 +52,31 @@ def bot_response_buttons():
     )
 
 
-def message_wrapper(
-    chat_interaction: ChatInteraction,
-    has_token: bool,
-):
-    return rx.fragment(
+def message_wrapper(chat_interaction: ChatInteraction):
+    user_ava = rx.avatar(src=chat_interaction.chat_participant_user_name, **AvatarStyle)
+    rb_ava = rx.avatar(src=chat_interaction.chat_participant_assistant_name, **AvatarStyle)
+
+    user_header = msg_header(chat_interaction.chat_participant_user_name, chat_interaction.timestamp)
+    rb_header = msg_header(chat_interaction.chat_participant_assistant_name, chat_interaction.timestamp)
+
+    user_message = rx.markdown(chat_interaction.prompt, **MessageTextStyle)
+    rb_message = rx.markdown(chat_interaction.answer, **MessageTextStyle)
+
+    return rx.box(
         # this component is related to the user input
         message_part_component(
-            user_name=chat_interaction.chat_participant_user_name,
-            timestamp=chat_interaction.timestamp,
-            message=chat_interaction.prompt,
-            style_kwargs=question_style_kwargs,
-            avatar_url=chat_interaction.chat_participant_user_avatar_url,
+            avatar=user_ava,
+            header=user_header,
+            message=user_message,
+            style_props=UserMessageStyle,
         ),
         # this component is related to the bot response
         message_part_component(
             # bot_response_buttons(),
-            user_name=chat_interaction.chat_participant_assistant_name,
-            timestamp=chat_interaction.timestamp,
-            message=chat_interaction.answer,
-            style_kwargs=answer_style_kwargs,
-            avatar_url=chat_interaction.chat_participant_assistant_avatar_url,
+            avatar=rb_ava,
+            header=rb_header,
+            message=rb_message,
+            style_props=LLMResponseStyle,
         ),
     )
 
@@ -89,25 +84,17 @@ def message_wrapper(
 def chat_body(
     chat_interactions: list[ChatInteraction],
     divider_title_text: str,
-    has_token: bool,
 ):
     return rx.vstack(
-        chat_date_divider(
-            divider_title_text=divider_title_text,
-        ),
+        chat_date_divider(divider_title_text=divider_title_text),
         rx.scroll_area(
             rx.vstack(
-                rx.foreach(
-                    chat_interactions,
-                    lambda chat_interaction: message_wrapper(
-                        chat_interaction=chat_interaction,
-                        has_token=has_token,
-                    ),
-                ),
+                rx.foreach(chat_interactions, message_wrapper),
                 gap="2em",
             ),
             scrollbars="vertical",
             type="scroll",
+            # style={"height": "50vh"},
         ),
         dialog_library(),
         width="100%",

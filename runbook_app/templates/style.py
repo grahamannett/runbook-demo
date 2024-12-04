@@ -61,6 +61,9 @@ class BaseStyle(ABCStyle):
             **kwargs.get("default", kwargs),
         }
 
+    def __call__(self, **kwargs) -> "BaseStyle":
+        return BaseStyle(**{**self.default, **kwargs})
+
     def __getitem__(self, key: str) -> Any:
         """Access style values directly from the instance."""
         return self.default[key]

@@ -2,7 +2,8 @@ from typing import Callable
 
 import reflex as rx
 
-from runbook_app.components.buttons import button_with_icon, llm_provider_dialog, logout_button
+from runbook_app.components.buttons import ButtonStyle, button_with_icon, llm_provider_dialog
+from runbook_app.page_chat.chat_state import ChatState
 from runbook_app.templates.style import BaseStyle
 
 NavBarStyle = BaseStyle(
@@ -18,23 +19,13 @@ NavBarStyle = BaseStyle(
     }
 )
 
-NavBarComponentStyle = BaseStyle(
-    **{
-        "width": "400px",
-        "display": "flex",
-        "align": "center",
-        "spacing": "6",
-    }
-)
+NavBarComponentStyle = BaseStyle(**{"width": "400px", "display": "flex", "align": "center", "spacing": "6"})
 
 
-def nav_bar(
-    on_create_new_chat: Callable,
-):
+def nav_bar(chat_state: ChatState):
     return rx.hstack(
         rx.hstack(
-            # toggle theme
-            logout_button(),
+            button_with_icon(text="Logout", on_click=chat_state.handle_logout, background="salmon"),
             rx.color_mode.button(),
             llm_provider_dialog(),
             **NavBarComponentStyle,
@@ -42,7 +33,7 @@ def nav_bar(
         button_with_icon(
             text="New Runbook",
             icon="plus",
-            on_click=on_create_new_chat,
+            on_click=chat_state.create_new_runbook,
         ),
         **NavBarStyle,
     )

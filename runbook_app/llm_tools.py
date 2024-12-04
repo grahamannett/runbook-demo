@@ -29,7 +29,6 @@ def get_ai_client(ai_provider="ollama", ai_provider_url=None, ai_provider_api_ke
 
 
 def get_ai_model(ai_provider: str = "ollama") -> str:
-    global model_name
     match ai_provider:
         case "ollama":
             model_name = LLMConfig.ai_model

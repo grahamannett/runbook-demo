@@ -8,7 +8,7 @@ from runbook_app.page_chat.chat_state import ChatState
 from runbook_app.templates.pop_up import LibraryDocument, LibraryPrompt
 
 
-def use_library_button(library_prompt: LibraryPrompt, input_box_id: str):
+def use_library_button(library_prompt: LibraryPrompt):
     return rx.button(
         rx.icon(tag="book", size=18),
         "Library",
@@ -25,7 +25,7 @@ def use_library_button(library_prompt: LibraryPrompt, input_box_id: str):
             shade=11,
         ),
         on_click=library_prompt.toggle_prompt_library,
-        id=input_box_id,
+        id=ChatState._input_box_id,
     )
 
 
@@ -41,7 +41,7 @@ def list_of_document_components(border: str):
                     align_items="start",
                 ),
                 rx.spacer(),
-                badge_with_icon("View", "eye"),
+                # badge_with_icon("View", "eye"),
                 width="100%",
                 padding="2",
                 border_bottom=border,
@@ -64,8 +64,13 @@ def use_document_library():
         ),
         rx.dialog.content(
             rx.dialog.title(
-                rx.text("Document Library"),
-                # rx.dialog.description("View loaded documents and add new ones by URL."),
+                rx.hstack(
+                    rx.text("Document Library"),
+                    rx.spacer(),
+                    rx.dialog.close(
+                        rx.icon(tag="x"),
+                    ),
+                ),
             ),
             rx.vstack(
                 # URL Input section
@@ -93,18 +98,15 @@ def use_document_library():
                 #         font_size="sm",
                 #     ),
                 # ),
+                rx.dialog.description("View loaded documents and add new ones by URL."),
                 width="100%",
                 spacing="4",
-            ),
-            rx.dialog.close(
-                rx.icon(tag="x"),
             ),
         ),
     )
 
 
 def input_box(
-    input_box_id: str,
     input_box_text_value: str,
     input_prompt_is_loading: bool,
     input_prompt_on_change: Callable,
@@ -144,7 +146,7 @@ def input_box(
         rx.divider(),
         rx.hstack(
             rx.hstack(
-                use_library_button(library_prompt=library_prompt, input_box_id=input_box_id),
+                use_library_button(library_prompt=library_prompt),
                 rx.spacer(),
                 use_document_library(),
                 display="flex",
