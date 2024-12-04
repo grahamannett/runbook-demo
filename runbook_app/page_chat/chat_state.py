@@ -1,13 +1,10 @@
-import functools
-import os
 from datetime import datetime
 from typing import Sequence
 
 import reflex as rx
-from sqlalchemy import select
 from together import Together
 
-from runbook_app.components.auth_signin import signin
+from runbook_app import rag_tools
 from runbook_app.db_models import ChatInteraction, Document, Runbook
 from runbook_app.db_ops import (
     check_chat_interaction_exists,
@@ -17,26 +14,9 @@ from runbook_app.db_ops import (
     get_runbooks,
     save_chat_interaction,
 )
-from runbook_app.dev_utils import is_dev_mode
 from runbook_app.llm_tools import LLMConfig, create_messages_for_chat_completion, get_ai_client, get_ai_model
-from rxconstants import INPUT_BOX_ID, SCROLL_DOWN_ON_LOAD, tz
-
-
-def require_login(page: rx.app.ComponentCallable) -> rx.app.ComponentCallable:
-    if is_dev_mode():
-        return page
-
-    @functools.wraps(page)
-    def protected_page() -> rx.Component:
-        return rx.box(
-            rx.cond(
-                ChatState.is_hydrated,
-                rx.cond(ChatState.valid_session, page(), signin(on_submit_signin=ChatState.handle_login_form)),
-                rx.spinner(),
-            ),
-        )
-
-    return protected_page
+from runbook_app.utils import proc_ctx
+from rxconstants import INPUT_BOX_ID, SCROLL_DOWN_ON_LOAD, rag_docs_storage_type, tz
 
 
 class ChatState(rx.State):
@@ -58,8 +38,8 @@ class ChatState(rx.State):
     runbooks: list[Runbook] = []
     chat_interactions: list[ChatInteraction] = []
     documents: list[Document]
+    processing_document: bool = False
 
-    has_token: bool = True
     username: str = "user"
     prompt: str = ""
     result: str = ""
@@ -72,6 +52,10 @@ class ChatState(rx.State):
     ai_model: str = LLMConfig.ai_model
 
     async def on_load_index(self):
+        if self.processing_document:
+            print("possibly was still processing document...")
+            self.processing_document = False
+
         with rx.session() as session:
             self.runbooks = get_runbooks(username=self.username, session=session)
 
@@ -81,24 +65,15 @@ class ChatState(rx.State):
             self.runbook_id = self.runbooks[0].id
             self.chat_interactions = get_runbook_chat_interactions(runbook_id=self.runbook_id, session=session)
 
+        self.load_all_documents()
+
         # scroll to bottom - can maybe comment out
         if SCROLL_DOWN_ON_LOAD:
             yield ChatState.background_scroll_bottom_on_load()
 
-    @rx.var
-    def timestamp_formatted(
-        self,
-    ) -> str:
-        return self.timestamp.strftime("%I:%M %p")
-
-    @rx.event(background=True)
-    async def background_scroll_bottom_on_load(self):
-        yield rx.scroll_to(elem_id=ChatState._input_box_id)
-
     def handle_logout(self):
         print("logging out...")
-        # self.valid_session = False
-        # return rx.redirect("/")
+        self.valid_session = False
 
     def handle_login_form(self, form_data: dict):
         print(f"data: {form_data}")
@@ -106,19 +81,16 @@ class ChatState(rx.State):
         return rx.redirect("/")
 
     def load_all_documents(self) -> None:
-        print("loading all documents...")
-
-    def processes_url(self, data: dict) -> None:
-        print(f"processing url: {data}")
+        # print(f"loading all documents...: {self.documents=}")
+        self.documents = rag_tools.load_all_documents()
+        print(f"loaded {len(self.documents)} documents")
+        for doc in self.documents:
+            print(f"{doc=}")
 
     def print_ai_info(self) -> None:
-        print(f"AI_PROVIDER: {self.ai_provider}")
-        print(f"AI_PROVIDER_URL: {self.ai_provider_url}")
-        print(f"AI_PROVIDER_API_KEY: {self.ai_provider_api_key}")
+        print(f"{self.ai_provider=} | {self.ai_provider_url=} | {self.ai_provider_api_key=} | {self.ai_model=}")
 
-    def _get_client_instance(
-        self,
-    ) -> Together:
+    def _get_client_instance(self) -> Together:
         if self._ai_client_instance is not None:
             return self._ai_client_instance
 
@@ -136,14 +108,7 @@ class ChatState(rx.State):
     def _fetch_messages(self) -> Sequence[ChatInteraction]:
         return fetch_messages(username=self.username, prompt=self.prompt)
 
-    def get_html_document(self, url: str) -> None:
-        # Create directory if it doesn't exist
-        os.makedirs("runbook-documents", exist_ok=True)
-
-    def set_prompt(
-        self,
-        prompt: str,
-    ) -> None:
+    def set_prompt(self, prompt: str) -> None:
         self.prompt = prompt
 
     def create_new_runbook(self) -> None:
@@ -198,6 +163,18 @@ class ChatState(rx.State):
             self.chat_interactions[-1].answer = resp.choices[0].message.content
             self.result = self.chat_interactions[-1].answer
 
+    # ----
+    # ---- rx.Vars
+    # ----
+
+    @rx.var
+    def timestamp_formatted(self) -> str:
+        return self.timestamp.strftime("%I:%M %p")
+
+    # ----
+    # ---- rx.Events
+    # ----
+
     @rx.event(background=True)
     async def submit_prompt(self):
         async def _fetch_chat_completion_session(
@@ -248,18 +225,12 @@ class ChatState(rx.State):
         if self.username == "":
             raise ValueError("Username is required")
 
-        if prev_exists := self._check_saved_chat_interactions(
-            prompt=prompt,
-            username=self.username,
-        ):
-            yield rx.toast.error(
-                "You have already asked this question or have asked too many questions in the past 24 hours.",
-            )
+        if self._check_saved_chat_interactions(prompt=prompt, username=self.username):
+            yield rx.toast.error("Question for this runbook already exists.")
             return
 
         async with self:
             set_ui_loading_state()
-
             yield
 
             resp = await _fetch_chat_completion_session(prompt)
@@ -271,3 +242,25 @@ class ChatState(rx.State):
                 yield scroll_event
 
         self._save_resulting_chat_interaction(chat_interaction=self.chat_interactions[-1])
+
+    @rx.event(background=True)
+    async def background_scroll_bottom_on_load(self):
+        # if not self.valid_session:
+        #     return
+        yield rx.scroll_to(elem_id=ChatState._input_box_id)
+
+    @rx.event(background=True)
+    async def add_document(self, form_data: dict = {}):
+        print(f"adding document: {form_data=}")
+        url = form_data.get("url", None)
+
+        def btn_loading():
+            self.processing_document = not self.processing_document
+
+        async with proc_ctx(self, with_fn=(btn_loading,)) as self:
+            yield rx.toast.info("Adding document...")
+            if not rag_tools.valid_url(url):
+                yield rx.toast.error("Invalid URL")
+                return
+            print(f"adding document to rag_document type: {rag_docs_storage_type}")
+            yield rx.toast.success("added document")

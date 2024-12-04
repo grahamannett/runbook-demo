@@ -1,6 +1,7 @@
 from typing import Callable
 
 import reflex as rx
+from together.resources import chat
 
 from runbook_app.components.badges import badge_with_icon
 from runbook_app.components.buttons import button_with_icon
@@ -8,7 +9,7 @@ from runbook_app.page_chat.chat_state import ChatState
 from runbook_app.templates.pop_up import LibraryDocument, LibraryPrompt
 
 
-def use_library_button(library_prompt: LibraryPrompt):
+def use_library_button():
     return rx.button(
         rx.icon(tag="book", size=18),
         "Library",
@@ -24,7 +25,7 @@ def use_library_button(library_prompt: LibraryPrompt):
             color="slate",
             shade=11,
         ),
-        on_click=library_prompt.toggle_prompt_library,
+        on_click=LibraryPrompt.toggle_library,
         id=ChatState._input_box_id,
     )
 
@@ -53,13 +54,13 @@ def list_of_document_components(border: str):
     )
 
 
-def use_document_library():
+def use_document_library(chat_state: ChatState):
     return rx.dialog.root(
         rx.dialog.trigger(
             button_with_icon(
                 "Documents",
                 "panel-top",
-                on_click=LibraryDocument.toggle_document_library,
+                on_click=LibraryDocument.toggle_library,
             )
         ),
         rx.dialog.content(
@@ -67,37 +68,18 @@ def use_document_library():
                 rx.hstack(
                     rx.text("Document Library"),
                     rx.spacer(),
-                    rx.dialog.close(
-                        rx.icon(tag="x"),
-                    ),
+                    rx.dialog.close(rx.icon(tag="x")),
                 ),
             ),
             rx.vstack(
                 # URL Input section
                 rx.form(
                     rx.hstack(
-                        rx.input(
-                            placeholder="Enter document URL...",
-                            # value=LibraryDocument.url_input,
-                            # on_change=LibraryDocument.set_url_input,
-                            width="100%",
-                        ),
-                        rx.button(
-                            "Add",
-                            type="submit",
-                            # is_loading=LibraryDocument.processing,
-                        ),
+                        rx.input(placeholder="Enter document URL...", name="url", width="100%"),
+                        rx.button("Add", type="submit", loading=chat_state.processing_document),
                     ),
-                    # on_submit=ChatState.process_url,
+                    on_submit=chat_state.add_document,
                 ),
-                # rx.cond(
-                #     LibraryDocument.error,
-                #     rx.text(
-                #         LibraryDocument.error,
-                #         color="red",
-                #         font_size="sm",
-                #     ),
-                # ),
                 rx.dialog.description("View loaded documents and add new ones by URL."),
                 width="100%",
                 spacing="4",
@@ -106,14 +88,7 @@ def use_document_library():
     )
 
 
-def input_box(
-    input_box_text_value: str,
-    input_prompt_is_loading: bool,
-    input_prompt_on_change: Callable,
-    send_button_on_click: Callable,
-    library_prompt: LibraryPrompt,
-    **kwargs,
-):
+def input_box(chat_state: ChatState, **kwargs):
     return rx.vstack(
         rx.input(
             rx.input.slot(
@@ -125,9 +100,9 @@ def input_box(
                     content="Enter a question to get a response.",
                 ),
             ),
-            value=input_box_text_value,
+            value=chat_state.prompt,
             placeholder="Generate a runbook for which task",
-            on_change=input_prompt_on_change,
+            on_change=chat_state.set_prompt,
             height="75px",
             width="100%",
             background_color=rx.color(
@@ -146,17 +121,17 @@ def input_box(
         rx.divider(),
         rx.hstack(
             rx.hstack(
-                use_library_button(library_prompt=library_prompt),
+                use_library_button(),
                 rx.spacer(),
-                use_document_library(),
+                use_document_library(chat_state=chat_state),
                 display="flex",
                 align="center",
             ),
             button_with_icon(
                 text="Send Message",
                 icon="send",
-                is_loading=input_prompt_is_loading,
-                on_click=send_button_on_click,
+                is_loading=chat_state.ai_loading,
+                on_click=chat_state.submit_prompt,
             ),
             width="100%",
             display="flex",

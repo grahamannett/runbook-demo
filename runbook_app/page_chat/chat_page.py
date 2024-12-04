@@ -3,7 +3,6 @@ import reflex as rx
 from runbook_app.page_chat.chat_body import chat_body
 from runbook_app.page_chat.chat_state import ChatState
 from runbook_app.templates.input_box import input_box
-from runbook_app.templates.pop_up import LibraryPrompt
 from runbook_app.templates.style import BaseStyle
 from runbook_app.templates.top_bar import nav_bar
 
@@ -25,10 +24,7 @@ parent_style = BaseStyle(
 )
 
 
-def chat_page(
-    chat_state: ChatState = ChatState,
-    library_prompt: LibraryPrompt = LibraryPrompt,
-):
+def chat_page(chat_state: type[ChatState] = ChatState):
     return rx.box(
         rx.cond(
             chat_state.is_hydrated,
@@ -40,13 +36,7 @@ def chat_page(
                         chat_interactions=chat_state.chat_interactions,
                         divider_title_text=chat_state.timestamp_formatted,
                     ),
-                    input_box(
-                        input_box_text_value=chat_state.prompt,
-                        input_prompt_is_loading=chat_state.ai_loading,
-                        input_prompt_on_change=chat_state.set_prompt,
-                        send_button_on_click=chat_state.submit_prompt,
-                        library_prompt=library_prompt,
-                    ),
+                    input_box(chat_state=chat_state),
                     **body_style,
                 ),
                 **parent_style,

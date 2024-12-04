@@ -5,12 +5,8 @@ import pytest
 import reflex as rx
 
 from runbook_app.db_models import HTMLSource
-from runbook_app.rag_tools import (
-    _save_doc_to_db,
-    _save_doc_to_file,
-    load_all_documents,
-)
-from rxconstants import rag_documents, saved_rag_documents
+from runbook_app.rag_tools import load_all_documents
+from rxconstants import rag_docs_file_dir, rag_docs_storage_type
 
 test_db_fixture = "test.db"
 

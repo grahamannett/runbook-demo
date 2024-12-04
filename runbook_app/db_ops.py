@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import Callable, ParamSpec, Sequence, TypeVar
+from typing import Callable, ParamSpec, TypeVar
 
 import reflex as rx
 from sqlmodel import Session, column, func, or_, select
@@ -110,7 +110,7 @@ def fetch_messages(
     session: Session,
     filter_str: str | None = None,
     limit: int = MAX_QUESTIONS,
-) -> Sequence[ChatInteraction]:
+) -> list[ChatInteraction]:
     """Fetch chat messages for a user with optional filtering.
 
     Args:
@@ -139,7 +139,7 @@ def fetch_messages(
     if limit:
         query = query.limit(limit)
 
-    return session.exec(query).all()
+    return list(session.exec(query).all())
 
 
 @with_session

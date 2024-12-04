@@ -12,25 +12,22 @@ __prompts__ = []
 
 
 class PromptLibrary(rx.State):
-    def create_new_prompt_entry(
-        self,
-    ) -> None:
+    def create_new_prompt_entry(self) -> None:
         pass
 
 
+# WARN: cannot make these both subclasses of parent rx.State as it doesn't work with reflex
 class LibraryPrompt(rx.State):
     is_open: bool = False
 
-    def toggle_prompt_library(self) -> None:
+    def toggle_library(self) -> None:
         self.is_open = not self.is_open
 
 
 class LibraryDocument(rx.State):
-    """State for managing document library."""
-
     is_open: bool = False
 
-    def toggle_document_library(self) -> None:
+    def toggle_library(self) -> None:
         self.is_open = not self.is_open
 
 
@@ -144,7 +141,7 @@ def dialog_library_base(
                     rx.text("Runbook Library"),
                     rx.dialog.close(
                         rx.icon(tag="x", size=20),
-                        on_click=LibraryPrompt.toggle_prompt_library,
+                        on_click=LibraryPrompt.toggle_library,
                     ),
                     width="100%",
                     align="center",
@@ -176,7 +173,7 @@ def dialog_library_base(
             ),
             height="40em",
             overflow="hidden",
-            on_interact_outside=LibraryPrompt.toggle_prompt_library,
+            on_interact_outside=LibraryPrompt.toggle_library,
         ),
         open=LibraryPrompt.is_open,
     )

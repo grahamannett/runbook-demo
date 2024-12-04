@@ -6,10 +6,11 @@ app_password = "graham"
 
 
 saved_runbooks_dir = "./saved/runbooks"
-saved_rag_documents = "./saved/rag"
 
-# rag_documents = "table"  # table or file, file is easier to inspect
-rag_documents = "file"  # table or file, file is easier to inspect
+rag_docs_file_dir = "./saved/rag"
+# # table or file, file is easier to inspect
+rag_docs_storage_type = "table"  # StorageType.TABLE
+
 
 tz = timezone.utc
 
@@ -17,4 +18,4 @@ tz = timezone.utc
 MAX_QUESTIONS = 10
 INPUT_BOX_ID = "input-box"
 
-SCROLL_DOWN_ON_LOAD = False
+SCROLL_DOWN_ON_LOAD = True  # this is helpful if i want to look at bottom of page while dev
