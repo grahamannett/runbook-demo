@@ -1,10 +1,9 @@
-from typing import Callable
-
 import reflex as rx
-from together.resources import chat
 
 from runbook_app.components.badges import badge_with_icon
 from runbook_app.components.buttons import button_with_icon
+from runbook_app.components.document_library import document_source_card
+from runbook_app.db_models import Document, DocumentSource
 from runbook_app.page_chat.chat_state import ChatState
 from runbook_app.templates.pop_up import LibraryDocument, LibraryPrompt
 
@@ -34,7 +33,7 @@ def list_of_document_components(border: str):
     # Document list
     return rx.vstack(
         rx.foreach(
-            ChatState.documents,
+            ChatState.document_sources,
             lambda doc: rx.hstack(
                 rx.vstack(
                     rx.heading(doc["title"], size="sm"),
@@ -54,7 +53,22 @@ def list_of_document_components(border: str):
     )
 
 
-def use_document_library(chat_state: ChatState):
+def add_document_component():
+    return rx.vstack(
+        # URL Input section
+        rx.form(
+            rx.hstack(
+                rx.input(placeholder="Enter document URL...", name="url", width="100%"),
+                rx.button("Add", type="submit", loading=ChatState.processing_document),
+            ),
+            on_submit=ChatState.add_document,
+        ),
+        width="100%",
+        spacing="4",
+    )
+
+
+def use_document_library():
     return rx.dialog.root(
         rx.dialog.trigger(
             button_with_icon(
@@ -68,23 +82,26 @@ def use_document_library(chat_state: ChatState):
                 rx.hstack(
                     rx.text("Document Library"),
                     rx.spacer(),
-                    rx.dialog.close(rx.icon(tag="x")),
-                ),
-            ),
-            rx.vstack(
-                # URL Input section
-                rx.form(
-                    rx.hstack(
-                        rx.input(placeholder="Enter document URL...", name="url", width="100%"),
-                        rx.button("Add", type="submit", loading=chat_state.processing_document),
+                    rx.dialog.close(
+                        rx.icon(
+                            tag="x",
+                            on_click=LibraryDocument.toggle_library,
+                        )
                     ),
-                    on_submit=chat_state.add_document,
                 ),
                 rx.dialog.description("View loaded documents and add new ones by URL."),
-                width="100%",
+            ),
+            rx.flex(
+                rx.vstack(
+                    rx.foreach(ChatState.document_sources, document_source_card),
+                ),
+                rx.divider(size="4"),
+                add_document_component(),
+                direction="column",
                 spacing="4",
             ),
         ),
+        default_open=True,
     )
 
 
@@ -123,7 +140,7 @@ def input_box(chat_state: ChatState, **kwargs):
             rx.hstack(
                 use_library_button(),
                 rx.spacer(),
-                use_document_library(chat_state=chat_state),
+                use_document_library(),
                 display="flex",
                 align="center",
             ),

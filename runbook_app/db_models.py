@@ -1,7 +1,8 @@
 from datetime import datetime
+from enum import StrEnum, auto
 
 import reflex as rx
-from sqlmodel import Field
+from sqlmodel import JSON, Column, Field
 
 from rxconstants import tz
 
@@ -46,20 +47,54 @@ class ChatInteraction(
     chat_participant_assistant_avatar_url: str = "/runbook-avatar.png"
 
 
-class HTMLSource(rx.Model, table=True):
+class ContentType(StrEnum):
+    HTML = auto()
+    TEXT = auto()
+    JSON = auto()
+    # default
+    DEFAULT = HTML
+
+
+class DocumentSource(rx.Model, table=True):
     """A table for storing HTML pages in the database."""
 
-    title: str
-    content: str
-    url: str
+    path: str
+    content: str  # either the raw html or the parsed html content
+
+    title: str | None = None
+    content_type: ContentType = ContentType.DEFAULT
     created_at: datetime = datetime.now(tz=tz)
+
+    # Soft delete fields
+    is_deleted: bool = Field(default=False)
+    deleted_at: datetime | None = Field(default=None)
+
+    def __repr__(self):
+        return f"DocSrc(urls={self.path}, title={self.title}, content_type={self.content_type})"
 
 
 class Document(rx.Model, table=True):
     """A table for storing parsed documents."""
 
     content: str = ""
-    filepath: str | None = None
+    meta: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    source: int | None = Field(foreign_key="documentsource.id")
 
-    source: int | None = Field(foreign_key="htmlsource.id")
+    path: str | None = None  #
     created_at: datetime = datetime.now(tz=tz)
+
+    # Soft delete fields
+    is_deleted: bool = Field(default=False)
+    deleted_at: datetime | None = Field(default=None)
+
+
+DocumentTableLookup = {
+    "document": Document,
+    "documentsource": DocumentSource,
+}
+
+TableLookup = {
+    "runbook": Runbook,
+    "chatinteraction": ChatInteraction,
+    **DocumentTableLookup,
+}

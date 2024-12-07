@@ -4,7 +4,7 @@ from datetime import datetime
 import pytest
 import reflex as rx
 
-from runbook_app.db_models import HTMLSource
+from runbook_app.db_models import DocumentSource
 from runbook_app.rag_tools import load_all_documents
 from rxconstants import rag_docs_file_dir, rag_docs_storage_type
 
@@ -58,7 +58,7 @@ def setup_db_documents(sample_documents):
     # Cleanup: remove test database entries
     with rx.session(url=test_db_fixture) as session:
         for doc_id in saved_ids:
-            session.query(HTMLSource).filter(HTMLSource.id == doc_id).delete()
+            session.query(DocumentSource).filter(DocumentSource.id == doc_id).delete()
         session.commit()
 
 

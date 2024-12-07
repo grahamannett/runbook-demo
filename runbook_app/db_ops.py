@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import wraps
 from typing import Callable, ParamSpec, TypeVar
 
@@ -5,8 +6,8 @@ import reflex as rx
 from sqlmodel import Session, column, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from runbook_app.db_models import ChatInteraction, Document, Runbook
-from rxconstants import MAX_QUESTIONS
+from runbook_app.db_models import ChatInteraction, Document, DocumentSource, Runbook
+from rxconstants import MAX_QUESTIONS, tz
 
 Params = ParamSpec("Params")
 ReturnType = TypeVar("ReturnType")
@@ -217,3 +218,24 @@ def check_chat_interaction_exists(
     )
 
     return session.exec(query).one_or_none() is not None
+
+
+@with_session
+def delete_document_source(source_id: int, *, session: Session) -> bool:
+    """Soft delete an DocumentSource.
+
+    Args:
+        source_id: The ID of the DocumentSource to delete
+        session: The database session to use
+
+    Returns:
+        True if the source was found and marked as deleted, False otherwise
+    """
+    source = session.get(DocumentSource, source_id)
+    if source:
+        source.is_deleted = True
+        source.deleted_at = datetime.now(tz=tz)
+        session.commit()
+        return True
+
+    return False

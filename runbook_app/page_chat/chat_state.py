@@ -2,10 +2,12 @@ from datetime import datetime
 from typing import Sequence
 
 import reflex as rx
+from reflex.utils import console
+from sqlalchemy import select
 from together import Together
 
 from runbook_app import rag_tools
-from runbook_app.db_models import ChatInteraction, Document, Runbook
+from runbook_app.db_models import ChatInteraction, Document, DocumentSource, DocumentTableLookup, Runbook
 from runbook_app.db_ops import (
     check_chat_interaction_exists,
     create_new_runbook,
@@ -37,7 +39,9 @@ class ChatState(rx.State):
     runbook_id: int | None = None
     runbooks: list[Runbook] = []
     chat_interactions: list[ChatInteraction] = []
-    documents: list[Document]
+
+    document_sources: list[DocumentSource] = []  # List of all HTML sources
+    documents: dict[int, Document] = {}  # Maps DocumentSource.id to Document if it exists
     processing_document: bool = False
 
     username: str = "user"
@@ -53,7 +57,7 @@ class ChatState(rx.State):
 
     async def on_load_index(self):
         if self.processing_document:
-            print("possibly was still processing document...")
+            console.info("possibly was still processing document...")
             self.processing_document = False
 
         with rx.session() as session:
@@ -72,23 +76,29 @@ class ChatState(rx.State):
             yield ChatState.background_scroll_bottom_on_load()
 
     def handle_logout(self):
-        print("logging out...")
+        console.info("logging out...")
         self.valid_session = False
 
     def handle_login_form(self, form_data: dict):
-        print(f"data: {form_data}")
+        console.info(f"data: {form_data}")
         self.valid_session = True
         return rx.redirect("/")
 
     def load_all_documents(self) -> None:
-        # print(f"loading all documents...: {self.documents=}")
-        self.documents = rag_tools.load_all_documents()
-        print(f"loaded {len(self.documents)} documents")
-        for doc in self.documents:
-            print(f"{doc=}")
+        with rx.session() as session:
+            # Only fetch non-deleted sources
+            query = (
+                select(DocumentSource, Document)
+                .where(DocumentSource.is_deleted == False)  # noqa: E712
+                .outerjoin(Document, DocumentSource.id == Document.source)
+            )
+
+            results = session.exec(query).all()
+            self.document_sources = [row[0] for row in results]  # Extract DocumentSource objects
+            self.documents = {row[0].id: row[1] for row in results if row[1] is not None}
 
     def print_ai_info(self) -> None:
-        print(f"{self.ai_provider=} | {self.ai_provider_url=} | {self.ai_provider_api_key=} | {self.ai_model=}")
+        console.info(f"{self.ai_provider=} | {self.ai_provider_url=} | {self.ai_provider_api_key=} | {self.ai_model=}")
 
     def _get_client_instance(self) -> Together:
         if self._ai_client_instance is not None:
@@ -113,7 +123,6 @@ class ChatState(rx.State):
 
     def create_new_runbook(self) -> None:
         # Create new runbook interaction,
-        print("creating new runbook...")
         with rx.session() as session:
             _ = create_new_runbook(username=self.username, session=session)
             self.runbooks = get_runbooks(username=self.username, session=session)
@@ -245,22 +254,45 @@ class ChatState(rx.State):
 
     @rx.event(background=True)
     async def background_scroll_bottom_on_load(self):
-        # if not self.valid_session:
-        #     return
         yield rx.scroll_to(elem_id=ChatState._input_box_id)
 
     @rx.event(background=True)
     async def add_document(self, form_data: dict = {}):
-        print(f"adding document: {form_data=}")
         url = form_data.get("url", None)
+        if not url:
+            return
 
         def btn_loading():
             self.processing_document = not self.processing_document
 
         async with proc_ctx(self, with_fn=(btn_loading,)) as self:
-            yield rx.toast.info("Adding document...")
-            if not rag_tools.valid_url(url):
-                yield rx.toast.error("Invalid URL")
-                return
-            print(f"adding document to rag_document type: {rag_docs_storage_type}")
-            yield rx.toast.success("added document")
+            with rx.session() as session:
+                if not rag_tools.valid_url(url):
+                    yield rx.toast.error("Invalid URL")
+                    return
+
+                if rag_tools.document_exists(url, session=session):
+                    yield rx.toast.error("Document already fetched.")
+                    return
+
+                html_src = rag_tools.get_source(url)
+                session.add(html_src)
+                session.commit()
+                session.refresh(html_src)
+
+                yield rx.toast.success("added document")
+                self.load_all_documents()
+
+    @rx.event
+    def delete_doc(self, doc_id: int, doc_table: str = "DocumentSource") -> None:
+        entity = DocumentTableLookup[doc_table.lower()]
+
+        with rx.session() as session:
+            if doc := session.get(entity, doc_id):
+                console.info(f"deleting: {doc=}")
+                doc.is_deleted = True
+                doc.deleted_at = datetime.now(tz=tz)
+                session.commit()
+                self.load_all_documents()
+            else:
+                console.info(f"doc not found: {doc_id=} | {doc_table=}")

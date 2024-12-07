@@ -19,9 +19,7 @@ BadgeStyle = BaseStyle(
 )
 
 
-def badge_with_icon(
-    icon: str,
-):
+def badge_with_icon(icon: str):
     return rx.badge(
         rx.icon(
             tag=icon,
