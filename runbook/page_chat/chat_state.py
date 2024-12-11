@@ -4,7 +4,6 @@ from typing import Sequence
 import reflex as rx
 from reflex.utils import console
 from sqlalchemy import select
-from together import Together
 
 from runbook import rag_tools
 from runbook.db_models import ChatInteraction, Document, DocumentSource, DocumentTableLookup, Runbook
@@ -16,9 +15,9 @@ from runbook.db_ops import (
     get_runbooks,
     save_chat_interaction,
 )
-from runbook.llm_tools import LLMConfig, create_messages_for_chat_completion, get_ai_client, get_ai_model
-from runbook.utils import proc_ctx
-from rxconstants import INPUT_BOX_ID, SCROLL_DOWN_ON_LOAD, tz
+from runbook.llm_tools import LLMClient, LLMConfig, create_messages_for_chat_completion, get_ai_client, get_ai_model
+from runbook.utils import is_dev_mode, proc_ctx
+from rxconstants import INPUT_BOX_ID, SCROLL_DOWN_ON_LOAD, app_password, tz
 
 
 class ChatState(rx.State):
@@ -28,7 +27,7 @@ class ChatState(rx.State):
 
     filter_str: str = ""
 
-    _ai_client_instance: Together | None = None
+    _ai_client_instance: LLMClient | None = None
     _ai_chat_instance = None
 
     _input_box_id: str = INPUT_BOX_ID  # issue with reflex when this isnt a backend var
@@ -81,8 +80,10 @@ class ChatState(rx.State):
 
     def handle_login_form(self, form_data: dict):
         console.info(f"data: {form_data}")
-        self.valid_session = True
-        return rx.redirect("/")
+
+        if form_data.get("app_password") == app_password:
+            self.valid_session = True
+            return rx.redirect("/")
 
     def load_all_documents(self) -> None:
         with rx.session() as session:
@@ -100,7 +101,7 @@ class ChatState(rx.State):
     def print_ai_info(self) -> None:
         console.info(f"{self.ai_provider=} | {self.ai_provider_url=} | {self.ai_provider_api_key=} | {self.ai_model=}")
 
-    def _get_client_instance(self) -> Together:
+    def _get_client_instance(self) -> LLMClient:
         if self._ai_client_instance is not None:
             return self._ai_client_instance
 
@@ -190,18 +191,13 @@ class ChatState(rx.State):
             prompt: str,
         ):
             messages = create_messages_for_chat_completion(self.chat_interactions, prompt)
-            client_instance: Together = self._get_client_instance()
-            resp = client_instance.chat.completions.create(
+            client_instance: LLMClient = self._get_client_instance()
+            chat_kwargs = LLMConfig.ai_model_chat_completion_kwargs
+            resp = client_instance.chat_completion(
                 model=self.ai_model,
                 messages=messages,
-                max_tokens=512,
-                temperature=0.7,
-                top_p=0.7,
-                top_k=50,
-                repetition_penalty=1,
-                stop=["<|eot_id|>", "<|eom_id|>"],
-                truncate=130560,
                 stream=self.stream_resp,
+                **chat_kwargs,
             )
             if resp is None:
                 raise Exception("Session is None")
@@ -254,7 +250,8 @@ class ChatState(rx.State):
 
     @rx.event(background=True)
     async def background_scroll_bottom_on_load(self):
-        yield rx.scroll_to(elem_id=ChatState._input_box_id)
+        if self.valid_session or is_dev_mode():
+            yield rx.scroll_to(elem_id=ChatState._input_box_id)
 
     @rx.event(background=True)
     async def add_document(self, form_data: dict = {}):
