@@ -3,13 +3,13 @@ from typing import Any
 
 import reflex as rx
 
-from runbook_app.components.dividers import chat_date_divider
-from runbook_app.components.typography import msg_header
-from runbook_app.db_models import ChatInteraction
-from runbook_app.page_chat.style import LLMResponseStyle, UserMessageStyle
-from runbook_app.templates.action_bar import action_bar
-from runbook_app.templates.pop_up import dialog_library
-from runbook_app.templates.style import BaseStyle
+from runbook.components.dividers import chat_date_divider
+from runbook.components.typography import msg_header
+from runbook.db_models import ChatInteraction
+from runbook.page_chat.style import LLMResponseStyle, UserMessageStyle
+from runbook.templates.action_bar import action_bar
+from runbook.templates.pop_up import dialog_library
+from runbook.templates.style import BaseStyle
 
 AvatarStyle = BaseStyle(**{"fallback": "R", "size": "2", "border_radius": "100%"})
 MessageTextStyle = BaseStyle(

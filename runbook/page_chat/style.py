@@ -1,6 +1,6 @@
 import reflex as rx
 
-from runbook_app.templates.style import BaseStyle
+from runbook.templates.style import BaseStyle
 
 SharedStyle = BaseStyle(
     **{

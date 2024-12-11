@@ -6,9 +6,9 @@ from reflex.utils import console
 from sqlalchemy import select
 from together import Together
 
-from runbook_app import rag_tools
-from runbook_app.db_models import ChatInteraction, Document, DocumentSource, DocumentTableLookup, Runbook
-from runbook_app.db_ops import (
+from runbook import rag_tools
+from runbook.db_models import ChatInteraction, Document, DocumentSource, DocumentTableLookup, Runbook
+from runbook.db_ops import (
     check_chat_interaction_exists,
     create_new_runbook,
     fetch_messages,
@@ -16,9 +16,9 @@ from runbook_app.db_ops import (
     get_runbooks,
     save_chat_interaction,
 )
-from runbook_app.llm_tools import LLMConfig, create_messages_for_chat_completion, get_ai_client, get_ai_model
-from runbook_app.utils import proc_ctx
-from rxconstants import INPUT_BOX_ID, SCROLL_DOWN_ON_LOAD, rag_docs_storage_type, tz
+from runbook.llm_tools import LLMConfig, create_messages_for_chat_completion, get_ai_client, get_ai_model
+from runbook.utils import proc_ctx
+from rxconstants import INPUT_BOX_ID, SCROLL_DOWN_ON_LOAD, tz
 
 
 class ChatState(rx.State):

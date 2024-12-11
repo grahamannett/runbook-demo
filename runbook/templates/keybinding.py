@@ -1,8 +1,8 @@
 import reflex as rx
 
-from runbook_app.components.badges import sidebar_shortcut
-from runbook_app.components.typography import text_with_icon
-from runbook_app.templates.style import BaseStyle
+from runbook.components.badges import sidebar_shortcut
+from runbook.components.typography import text_with_icon
+from runbook.templates.style import BaseStyle
 
 KeybindingStyle = BaseStyle(
     **{

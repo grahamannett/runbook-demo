@@ -1,7 +1,7 @@
 from sqlmodel import Session, select
 
-from runbook_app.db_models import Document, DocumentSource
-from runbook_app.db_ops import with_session
+from runbook.db_models import Document, DocumentSource
+from runbook.db_ops import with_session
 
 
 @with_session

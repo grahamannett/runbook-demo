@@ -2,15 +2,15 @@ from urllib.request import urlopen
 
 from bs4 import BeautifulSoup
 
-from runbook_app.db_models import ContentType, Document, DocumentSource
-from runbook_app.rag_tools.rag_db import (
+from runbook.db_models import ContentType, Document, DocumentSource
+from runbook.rag_tools.rag_db import (
     document_exists_in_db,
     load_documents_from_db,
     load_sources_from_db,
     save_document_to_db,
 )
-from runbook_app.rag_tools.rag_dto import StorageType, storage_type
-from runbook_app.rag_tools.rag_file import load_documents_from_file, save_document_to_file
+from runbook.rag_tools.rag_dto import StorageType, storage_type
+from runbook.rag_tools.rag_file import load_documents_from_file, save_document_to_file
 
 
 def _check_storage_type():

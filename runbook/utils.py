@@ -1,4 +1,5 @@
 import os
+from asyncio import iscoroutinefunction
 from contextlib import asynccontextmanager
 from functools import wraps
 from typing import Callable, Sequence
@@ -6,7 +7,7 @@ from typing import Callable, Sequence
 import reflex as rx
 from reflex.utils.exec import is_prod_mode
 
-from runbook_app.components.auth_signin import signin
+from runbook.components.auth_signin import signin
 
 
 def is_dev_mode():
@@ -42,7 +43,7 @@ def make_require_login(chat_state: type["ChatState"]) -> Callable:
 
 
 @asynccontextmanager
-async def proc_ctx(state: type[rx.State], with_fn: Sequence[Callable] = []) -> type[rx.State]:  # type: ignore[type-arg]
+async def proc_ctx(state: type[rx.State], hooks: Sequence[Callable] = []) -> type[rx.State]:  # type: ignore[type-arg]
     """
     An asynchronous context manager for processing chat state with optional functions.
 
@@ -63,12 +64,13 @@ async def proc_ctx(state: type[rx.State], with_fn: Sequence[Callable] = []) -> t
             # Perform operations with the managed chat state
     """
 
-    def call_with() -> None:
-        _ = [fn() for fn in with_fn]
+    async def call_hooks():
+        return [await f() if iscoroutinefunction(f) else f() for f in hooks]
 
     async with state:
-        call_with()
+        # call each function, if its async use await
+        _ = await call_hooks()
         try:
             yield state
         finally:
-            call_with()
+            _ = await call_hooks()

@@ -2,7 +2,7 @@ import os
 
 from together import Together
 
-from runbook_app.db_models import ChatInteraction
+from runbook.db_models import ChatInteraction
 
 AI_MODEL: str = "UNKNOWN"
 

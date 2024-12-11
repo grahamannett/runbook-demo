@@ -1,8 +1,8 @@
 import reflex as rx
 
-from runbook_app.components.badges import badge_with_icon
-from runbook_app.db_models import DocumentSource
-from runbook_app.page_chat.chat_state import ChatState
+from runbook.components.badges import badge_with_icon
+from runbook.db_models import DocumentSource
+from runbook.page_chat.chat_state import ChatState
 
 
 def document_source_card(doc: DocumentSource):

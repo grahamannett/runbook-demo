@@ -6,7 +6,7 @@ import reflex as rx
 from sqlmodel import Session, column, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from runbook_app.db_models import ChatInteraction, Document, DocumentSource, Runbook
+from runbook.db_models import ChatInteraction, Document, DocumentSource, Runbook
 from rxconstants import MAX_QUESTIONS, tz
 
 Params = ParamSpec("Params")

@@ -2,11 +2,11 @@ from typing import Callable
 
 import reflex as rx
 
-from runbook_app.components.badges import badge_with_icon
-from runbook_app.components.buttons import button_with_icon
-from runbook_app.rag_tools import load_all_documents
-from runbook_app.templates.search_box import search_bar_with_sidebar_shortcut
-from runbook_app.templates.select import select_menu
+from runbook.components.badges import badge_with_icon
+from runbook.components.buttons import button_with_icon
+from runbook.rag_tools import load_all_documents
+from runbook.templates.search_box import search_bar_with_sidebar_shortcut
+from runbook.templates.select import select_menu
 
 __prompts__ = []
 

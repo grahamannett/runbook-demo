@@ -2,9 +2,9 @@ from typing import Any, Callable
 
 import reflex as rx
 
-from runbook_app.components.loading_icon import loading_icon
-from runbook_app.page_chat.chat_state import ChatState
-from runbook_app.templates.style import BaseStyle
+from runbook.components.loading_icon import loading_icon
+from runbook.page_chat.chat_state import ChatState
+from runbook.templates.style import BaseStyle
 
 ButtonStyle = BaseStyle(**{"radius": "large", "cursor": "pointer", "padding": "18px 16px"})
 

@@ -1,11 +1,11 @@
 import reflex as rx
 
-from runbook_app.components.badges import badge_with_icon
-from runbook_app.components.buttons import button_with_icon
-from runbook_app.components.document_library import document_source_card
-from runbook_app.db_models import Document, DocumentSource
-from runbook_app.page_chat.chat_state import ChatState
-from runbook_app.templates.pop_up import LibraryDocument, LibraryPrompt
+from runbook.components.badges import badge_with_icon
+from runbook.components.buttons import button_with_icon
+from runbook.components.document_library import document_source_card
+from runbook.db_models import Document, DocumentSource
+from runbook.page_chat.chat_state import ChatState
+from runbook.templates.pop_up import LibraryDocument, LibraryPrompt
 
 
 def use_library_button():

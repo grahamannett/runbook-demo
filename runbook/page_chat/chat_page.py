@@ -1,10 +1,10 @@
 import reflex as rx
 
-from runbook_app.page_chat.chat_body import chat_body
-from runbook_app.page_chat.chat_state import ChatState
-from runbook_app.templates.input_box import input_box
-from runbook_app.templates.style import BaseStyle
-from runbook_app.templates.top_bar import nav_bar
+from runbook.page_chat.chat_body import chat_body
+from runbook.page_chat.chat_state import ChatState
+from runbook.templates.input_box import input_box
+from runbook.templates.style import BaseStyle
+from runbook.templates.top_bar import nav_bar
 
 body_style = BaseStyle(
     width="100%",

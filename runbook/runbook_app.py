@@ -1,8 +1,8 @@
 import reflex as rx
 
-from runbook_app.page_chat.chat_page import chat_page
-from runbook_app.page_chat.chat_state import ChatState
-from runbook_app.utils import make_require_login
+from runbook.page_chat.chat_page import chat_page
+from runbook.page_chat.chat_state import ChatState
+from runbook.utils import make_require_login
 
 app = rx.App(
     stylesheets=[

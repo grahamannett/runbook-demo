@@ -4,8 +4,8 @@ from datetime import datetime
 import pytest
 import reflex as rx
 
-from runbook_app.db_models import DocumentSource
-from runbook_app.rag_tools import load_all_documents
+from runbook.db_models import DocumentSource
+from runbook.rag_tools import load_all_documents
 from rxconstants import rag_docs_file_dir, rag_docs_storage_type
 
 test_db_fixture = "test.db"

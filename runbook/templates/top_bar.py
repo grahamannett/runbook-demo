@@ -2,9 +2,9 @@ from typing import Callable
 
 import reflex as rx
 
-from runbook_app.components.buttons import ButtonStyle, button_with_icon, llm_provider_dialog
-from runbook_app.page_chat.chat_state import ChatState
-from runbook_app.templates.style import BaseStyle
+from runbook.components.buttons import ButtonStyle, button_with_icon, llm_provider_dialog
+from runbook.page_chat.chat_state import ChatState
+from runbook.templates.style import BaseStyle
 
 NavBarStyle = BaseStyle(
     **{

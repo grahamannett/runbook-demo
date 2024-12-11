@@ -7,8 +7,8 @@ import reflex as rx
 from bs4 import BeautifulSoup
 from sqlmodel import Session, select
 
-from runbook_app.db_models import Document
-from runbook_app.db_ops import with_session
+from runbook.db_models import Document
+from runbook.db_ops import with_session
 from rxconstants import rag_docs_storage_type
 
 
