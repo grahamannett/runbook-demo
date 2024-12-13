@@ -5,7 +5,11 @@
     readme = "README.md"
     authors = [{ name = "graham", email = "graham.annett@gmail.com" }]
     requires-python = ">=3.12"
-    dependencies = ["beautifulsoup4==4.12.3", "together>=1.3.5"]
+    dependencies = [
+    "beautifulsoup4==4.12.3",
+    "reflex>=0.6.6",
+    "together>=1.3.5",
+]
 
     [project.scripts]
         runbook = "runbook:main"
