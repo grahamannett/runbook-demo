@@ -26,10 +26,7 @@ class Runbook(rx.Model, table=True):
     )
 
 
-class ChatInteraction(
-    rx.Model,
-    table=True,
-):
+class ChatInteraction(rx.Model, table=True):
     """A table for questions and answers in the database."""
 
     prompt: str
@@ -55,41 +52,32 @@ class ContentType(StrEnum):
     DEFAULT = HTML
 
 
-class DocumentSource(rx.Model, table=True):
+class DocumentBase(rx.Model):
+    # soft delete fields
+    is_deleted: bool = Field(default=False)
+    deleted_at: datetime | None = Field(default=None)
+
+    #
+    created_at: datetime = datetime.now(tz=tz)
+    updated_at: datetime = datetime.now(tz=tz)
+
+
+class DocumentSource(DocumentBase, table=True):
     """A table for storing HTML pages in the database."""
 
     path: str
     content: str  # either the raw html or the parsed html content
+    parsed_content: str | None = ""
+    meta: dict = Field(default_factory=dict, sa_column=Column(JSON))
 
     title: str | None = None
     content_type: ContentType = ContentType.DEFAULT
-    created_at: datetime = datetime.now(tz=tz)
-
-    # Soft delete fields
-    is_deleted: bool = Field(default=False)
-    deleted_at: datetime | None = Field(default=None)
 
     def __repr__(self):
         return f"DocSrc(urls={self.path}, title={self.title}, content_type={self.content_type})"
 
 
-class Document(rx.Model, table=True):
-    """A table for storing parsed documents."""
-
-    content: str = ""
-    meta: dict = Field(default_factory=dict, sa_column=Column(JSON))
-    source: int | None = Field(foreign_key="documentsource.id")
-
-    path: str | None = None  #
-    created_at: datetime = datetime.now(tz=tz)
-
-    # Soft delete fields
-    is_deleted: bool = Field(default=False)
-    deleted_at: datetime | None = Field(default=None)
-
-
 DocumentTableLookup = {
-    "document": Document,
     "documentsource": DocumentSource,
 }
 

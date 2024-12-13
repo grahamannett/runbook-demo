@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from enum import StrEnum, auto
 
 from rxconstants import rag_docs_storage_type

@@ -78,3 +78,5 @@ reflex.db
 backend.zip
 frontend.zip
 saved/rag.py
+_data.txt
+_o*.py

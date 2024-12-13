@@ -3,9 +3,9 @@ import reflex as rx
 from runbook.components.badges import badge_with_icon
 from runbook.components.buttons import button_with_icon
 from runbook.components.document_library import document_source_card
-from runbook.db_models import Document, DocumentSource
 from runbook.page_chat.chat_state import ChatState
 from runbook.templates.pop_up import LibraryDocument, LibraryPrompt
+from rxconstants import INPUT_BOX_ID
 
 
 def use_library_button():
@@ -16,16 +16,9 @@ def use_library_button():
         cursor="pointer",
         padding="18px 16px",
         bg="transparent",
-        border=rx.color_mode_cond(
-            light="1px solid indigo",
-            dark="1px solid slate",
-        ),
-        color=rx.color(
-            color="slate",
-            shade=11,
-        ),
+        border=rx.color_mode_cond(light="1px solid indigo", dark="1px solid slate"),
+        color=rx.color(color="slate", shade=11),
         on_click=LibraryPrompt.toggle_library,
-        id=ChatState._input_box_id,
     )
 
 
@@ -69,10 +62,12 @@ def add_document_component():
 
 
 def use_document_library():
+    # default_open = ChatState.len_documents <= 0
+    default_open = True
     return rx.dialog.root(
         rx.dialog.trigger(
             button_with_icon(
-                "Documents",
+                f"Documents[{ChatState.len_documents}]",
                 "panel-top",
                 on_click=LibraryDocument.toggle_library,
             )
@@ -82,26 +77,19 @@ def use_document_library():
                 rx.hstack(
                     rx.text("Document Library"),
                     rx.spacer(),
-                    rx.dialog.close(
-                        rx.icon(
-                            tag="x",
-                            on_click=LibraryDocument.toggle_library,
-                        )
-                    ),
+                    rx.dialog.close(rx.icon(tag="x", on_click=LibraryDocument.toggle_library)),
                 ),
                 rx.dialog.description("View loaded documents and add new ones by URL."),
             ),
             rx.flex(
-                rx.vstack(
-                    rx.foreach(ChatState.document_sources, document_source_card),
-                ),
+                rx.vstack(rx.foreach(ChatState.document_sources, document_source_card)),
                 rx.divider(size="4"),
                 add_document_component(),
                 direction="column",
                 spacing="4",
             ),
         ),
-        default_open=True,
+        default_open=default_open,
     )
 
 
@@ -109,30 +97,18 @@ def input_box(chat_state: ChatState, **kwargs):
     return rx.vstack(
         rx.input(
             rx.input.slot(
-                rx.tooltip(
-                    rx.icon(
-                        "info",
-                        size=18,
-                    ),
-                    content="Enter a question to get a response.",
-                ),
+                rx.tooltip(rx.icon("info", size=18), content="Enter a question to get a response."),
             ),
             value=chat_state.prompt,
             placeholder="Generate a runbook for which task",
             on_change=chat_state.set_prompt,
             height="75px",
             width="100%",
-            background_color=rx.color(
-                color="indigo",
-                shade=2,
-            ),
+            background_color=rx.color(color="indigo", shade=2),
             variant="soft",
             outline="none",
             line_height="150%",
-            color=rx.color(
-                color="slate",
-                shade=11,
-            ),
+            color=rx.color(color="slate", shade=11),
             **kwargs,
         ),
         rx.divider(),
@@ -145,7 +121,7 @@ def input_box(chat_state: ChatState, **kwargs):
                 align="center",
             ),
             button_with_icon(
-                text="Send Message",
+                text=ChatState.send_message_text,
                 icon="send",
                 is_loading=chat_state.ai_loading,
                 on_click=chat_state.submit_prompt,
@@ -164,12 +140,7 @@ def input_box(chat_state: ChatState, **kwargs):
             f"2px solid {rx.color('indigo', 3)}",
             f"1px solid {rx.color('slate', 7, True)}",
         ),
-        background_color=rx.color(
-            color="indigo",
-            shade=2,
-        ),
-        box_shadow=rx.color_mode_cond(
-            light="0px 1px 3px rgba(25, 33, 61, 0.1)",
-            dark="none",
-        ),
+        background_color=rx.color(color="indigo", shade=2),
+        box_shadow=rx.color_mode_cond(light="0px 1px 3px rgba(25, 33, 61, 0.1)", dark="none"),
+        id=INPUT_BOX_ID,
     )

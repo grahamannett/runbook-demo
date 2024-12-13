@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
 
-from runbook.db_models import Document, DocumentSource
+from runbook.db_models import DocumentSource
 from runbook.db_ops import with_session
 
 
@@ -39,7 +39,7 @@ def save_document_to_db(
 
 
 @with_session
-def load_documents_from_db(*, session: Session) -> list[Document]:
+def load_documents_from_db(*, session: Session) -> list[DocumentSource]:
     """Load all documents from the database.
 
     Args:
@@ -49,7 +49,7 @@ def load_documents_from_db(*, session: Session) -> list[Document]:
         List of Document objects
     """
     try:
-        return list(session.exec(select(Document)).all())
+        return list(session.exec(select(DocumentSource)).all())
     except Exception as err:
         print(f"Error loading documents from db: {err}")
         return []

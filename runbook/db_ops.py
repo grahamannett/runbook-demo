@@ -3,10 +3,10 @@ from functools import wraps
 from typing import Callable, ParamSpec, TypeVar
 
 import reflex as rx
-from sqlmodel import Session, column, func, or_, select
+from sqlmodel import Session, column, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from runbook.db_models import ChatInteraction, Document, DocumentSource, Runbook
+from runbook.db_models import ChatInteraction, DocumentSource, Runbook
 from rxconstants import MAX_QUESTIONS, tz
 
 Params = ParamSpec("Params")
