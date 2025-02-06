@@ -1,7 +1,8 @@
 # runbook app
 
+![screenshot](./docs/example-docs.png)
 
-Using chat template for now
+Using chat template for now from:
 
 
 # to run

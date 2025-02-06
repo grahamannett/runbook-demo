@@ -3,10 +3,14 @@ from typing import Sequence
 
 import reflex as rx
 from reflex.utils import console
-from sqlalchemy import select
 
 from runbook import rag_tools
-from runbook.db_models import ChatInteraction, Document, DocumentSource, DocumentTableLookup, Runbook
+from runbook.db_models import (
+    ChatInteraction,
+    DocumentSource,
+    DocumentTableLookup,
+    Runbook,
+)
 from runbook.db_ops import (
     check_chat_interaction_exists,
     create_new_runbook,
@@ -15,7 +19,15 @@ from runbook.db_ops import (
     get_runbooks,
     save_chat_interaction,
 )
-from runbook.llm_tools import LLMClient, LLMConfig, create_messages_for_chat_completion, get_ai_client, get_ai_model
+from runbook.llm_tools import (
+    LLMClient,
+    LLMConfig,
+    ResponseType,
+    create_html_parse_prompt,
+    create_messages_for_chat_completion,
+    get_ai_client,
+    get_ai_model,
+)
 from runbook.utils import is_dev_mode, proc_ctx
 from rxconstants import INPUT_BOX_ID, SCROLL_DOWN_ON_LOAD, app_password, tz
 
@@ -26,11 +38,9 @@ class ChatState(rx.State):
     valid_session: bool = False
 
     filter_str: str = ""
+    document_markdown: str = ""
 
     _ai_client_instance: LLMClient | None = None
-    _ai_chat_instance = None
-
-    _input_box_id: str = INPUT_BOX_ID  # issue with reflex when this isnt a backend var
 
     has_checked_database: bool = False
     stream_resp: bool = True
@@ -40,7 +50,7 @@ class ChatState(rx.State):
     chat_interactions: list[ChatInteraction] = []
 
     document_sources: list[DocumentSource] = []  # List of all HTML sources
-    documents: dict[int, Document] = {}  # Maps DocumentSource.id to Document if it exists
+    # documents: dict[int, Document] = {}  # Maps DocumentSource.id to Document if it exists
     processing_document: bool = False
 
     username: str = "user"
@@ -74,9 +84,20 @@ class ChatState(rx.State):
         if SCROLL_DOWN_ON_LOAD:
             yield ChatState.background_scroll_bottom_on_load()
 
+    def check_document_parsed(self, doc_id: int) -> bool:
+        print(f"checking documents: {self.documents}")
+        if doc_id in self.documents:
+            return True
+        return False
+
     def handle_logout(self):
         console.info("logging out...")
         self.valid_session = False
+
+    def view_document(self, doc_markdown: str):
+        print(f"got markdown: {doc_markdown}")
+        self.document_markdown = doc_markdown
+        return rx.redirect("/document")
 
     def handle_login_form(self, form_data: dict):
         console.info(f"data: {form_data}")
@@ -88,15 +109,11 @@ class ChatState(rx.State):
     def load_all_documents(self) -> None:
         with rx.session() as session:
             # Only fetch non-deleted sources
-            query = (
-                select(DocumentSource, Document)
-                .where(DocumentSource.is_deleted == False)  # noqa: E712
-                .outerjoin(Document, DocumentSource.id == Document.source)
-            )
+            query = DocumentSource.select().where(DocumentSource.is_deleted == False)
 
             results = session.exec(query).all()
-            self.document_sources = [row[0] for row in results]  # Extract DocumentSource objects
-            self.documents = {row[0].id: row[1] for row in results if row[1] is not None}
+            self.document_sources = list(results)
+            print(f"document sources: {self.document_sources}")
 
     def print_ai_info(self) -> None:
         console.info(f"{self.ai_provider=} | {self.ai_provider_url=} | {self.ai_provider_api_key=} | {self.ai_model=}")
@@ -143,26 +160,17 @@ class ChatState(rx.State):
                 session=session,
             )
 
-    async def _process_response(self, resp):
-        """Process the response from the chat completion, handling both streaming and non-streaming cases.
-
-        Args:
-            resp: The response from the chat completion session
-        """
-        if self.stream_resp:
+    async def _process_response(self, resp, response_type: ResponseType):
+        if response_type == ResponseType.STREAM:
             try:
                 for item in resp:
-                    if item.choices and item.choices[0] and item.choices[0].delta:
-                        answer_text = item.choices[0].delta.content
-                        # Ensure answer_text is not None before concatenation
-                        if answer_text is not None:
-                            self.chat_interactions[-1].answer += answer_text
-                        else:
-                            answer_text = ""
-                            self.chat_interactions[-1].answer += answer_text
+                    answer_text = stream_get_content_openai_api(item)
+                    if answer_text is None:
+                        answer_text = ""
+                    self.chat_interactions[-1].answer += answer_text
 
-                        # this makes it so that we scroll while the response is being generated
-                        yield rx.scroll_to(elem_id=self._input_box_id)
+                    # Scroll while the response is being generated
+                    yield rx.scroll_to(elem_id=INPUT_BOX_ID)
 
             except StopAsyncIteration:
                 raise
@@ -178,12 +186,80 @@ class ChatState(rx.State):
     # ----
 
     @rx.var
+    def send_message_text(self) -> str:
+        if len(self.chat_interactions) == 0:
+            return "Generate a runbook"
+        return "Send Message"
+
+    @rx.var
     def timestamp_formatted(self) -> str:
         return self.timestamp.strftime("%I:%M %p")
+
+    @rx.var
+    def len_documents(self) -> int:
+        return len(self.document_sources)
+
+    # @rx.var
+    # d
 
     # ----
     # ---- rx.Events
     # ----
+
+    @rx.event(background=True)
+    async def regenerate_parsed_document(self, doc_id: int) -> None:
+        with rx.session() as session:
+            if not (doc := session.get(DocumentSource, ident=doc_id)):
+                yield rx.toast.error("Document not found")
+                return
+
+            yield rx.toast.info(f"regenerating parsed document: {doc.path}")
+
+        print(f"should still have doc: {doc.path}")
+        async with self:
+            client = get_ai_client(
+                ai_provider=self.ai_provider,
+                ai_provider_url=self.ai_provider_url,
+                ai_provider_api_key=self.ai_provider_api_key,
+            )
+            model = self.ai_model
+
+            # client_instance: LLMClient = self._get_client_instance()
+        gen_kwargs = LLMConfig.ai_model_chat_completion_kwargs
+
+        if "max_tokens" in gen_kwargs:
+            _max_tokens = gen_kwargs.pop("max_tokens")
+
+        print(f"chat completion kwargs: {gen_kwargs} | {len(doc.content)}")
+
+        messages = create_html_parse_prompt(html_content=doc.content)
+        resp = client.chat_completion(
+            model=model,
+            messages=messages,
+            stream=False,
+            temperature=0.5,
+        )
+
+        breakpoint()
+        # resp = client_instance.chat_completion(model=self.ai_model, messages=messages, stream=False)
+        # print
+
+        # chat_kwargs = LLMConfig.ai_model_chat_completion_kwargs
+        #     resp = client_instance.chat_completion(
+        #         model=self.ai_model,
+        #         messages=messages,
+        #         stream=self.stream_resp,
+        #         **chat_kwargs,
+        #     )
+        # messages = create_html_parse_prompt(html_content=)
+
+    @rx.event(background=True)
+    async def submit_prompt(self):
+        async def _fetch_chat_completion_session(
+            prompt: str,
+            response_type: ResponseType,
+        ):
+            messages = create_messages_for_chat_completion(self.chat_interactions, prompt)
 
     @rx.event(background=True)
     async def submit_prompt(self):
@@ -251,7 +327,7 @@ class ChatState(rx.State):
     @rx.event(background=True)
     async def background_scroll_bottom_on_load(self):
         if self.valid_session or is_dev_mode():
-            yield rx.scroll_to(elem_id=ChatState._input_box_id)
+            yield rx.scroll_to(elem_id=INPUT_BOX_ID)
 
     @rx.event(background=True)
     async def add_document(self, form_data: dict = {}):
@@ -262,7 +338,7 @@ class ChatState(rx.State):
         def btn_loading():
             self.processing_document = not self.processing_document
 
-        async with proc_ctx(self, with_fn=(btn_loading,)) as self:
+        async with proc_ctx(self, hooks=(btn_loading,)) as self:
             with rx.session() as session:
                 if not rag_tools.valid_url(url):
                     yield rx.toast.error("Invalid URL")

@@ -1,21 +1,18 @@
 import os
+from enum import Enum
 
-import openai
+import ollama
 
 from runbook.db_models import ChatInteraction
+from runbook.rag_tools import prompt
 
 AI_MODEL: str = "UNKNOWN"
 
+# redefinitions
 
-def _fix_chat_completion_kwargs_openai(kwargs: dict) -> dict:
-    if "repetition_penalty" in kwargs:
-        kwargs["frequency_penalty"] = kwargs.pop("repetition_penalty")
-    if "truncate" in kwargs:
-        kwargs["max_completion_tokens"] = kwargs.pop("truncate")
-    if "top_k" in kwargs:
-        kwargs.pop("top_k")
 
-    return kwargs
+def chat(*args, **kwargs) -> ollama.ChatResponse:
+    return ollama.chat(*args, **kwargs)
 
 
 class LLMConfig:
@@ -38,14 +35,24 @@ class LLMConfig:
     }
 
 
-class LLMClient(openai.Client):
-    # all of these sdk's are annoying/problematic af
-    # e.g. together ai sdk is broken/hasnt been updated
+class ResponseType(Enum):
+    STREAM = "stream"
+    FULL = "full"
 
-    def chat_completion(self, *args, **kwargs):
-        # these are replacement values for the openai sdk
-        kwargs = _fix_chat_completion_kwargs_openai(kwargs)
-        return self.chat.completions.create(*args, **kwargs)
+
+class LLMClient(ollama.Client):
+    # all of these sdk's are annoying/problematic af
+
+
+def _fix_chat_completion_kwargs_openai(kwargs: dict) -> dict:
+    if "repetition_penalty" in kwargs:
+        kwargs["frequency_penalty"] = kwargs.pop("repetition_penalty")
+    if "truncate" in kwargs:
+        kwargs["max_completion_tokens"] = kwargs.pop("truncate")
+    if "top_k" in kwargs:
+        kwargs.pop("top_k")
+
+    return kwargs
 
 
 _non_ollama_error = "Only using Ollama for now due to issues with Together"
@@ -110,6 +117,16 @@ def create_messages_for_chat_completion(
     return messages
 
 
+def create_html_parse_prompt(html_content: str, instructions: str = prompt.rag_html_parse_prompt):
+    messages = _create_messages(
+        chat_interactions=[],
+        prompt=html_content,
+        system_prompt=instructions,
+    )
+
+    return messages
+
+
 def create_messages_for_runbook_completion(
     chat_interactions: list[ChatInteraction],
     prompt: str,
@@ -121,3 +138,16 @@ def create_messages_for_runbook_completion(
     )
 
     return messages
+
+
+def stream_get_content_openai_api(item):
+    if item.choices and item.choices[0] and item.choices[0].delta:
+        answer_text = item.choices[0].delta.content
+        return answer_text
+    return None
+    # Ensure answer_text is not None before concatenation
+    # if answer_text is not None:
+    #     self.chat_interactions[-1].answer += answer_text
+    # else:
+    #     answer_text = ""
+    #     self.chat_interactions[-1].answer += answer_text
